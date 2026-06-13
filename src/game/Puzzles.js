@@ -59,18 +59,17 @@ export class PuzzleManager {
   }
 
   setupSocketListeners() {
-    if (this.mode === 'coop') {
-      // Sync incoming state from server
-      this.socket.on('puzzle_state', (srvState) => {
-        this.state = { ...this.state, ...srvState };
-        this.updatePuzzlesUI();
-      });
+    // Sync incoming state from server (used in coop, competition, and solo modes)
+    this.socket.on('puzzle_state', (srvState) => {
+      this.state = { ...this.state, ...srvState };
+      // In competition/solo modes the server also restores the player's saved progress.
+      this.updatePuzzlesUI();
+    });
 
-      this.socket.on('puzzle_update', (srvState) => {
-        this.state = { ...this.state, ...srvState };
-        this.updatePuzzlesUI();
-      });
-    }
+    this.socket.on('puzzle_update', (srvState) => {
+      this.state = { ...this.state, ...srvState };
+      this.updatePuzzlesUI();
+    });
   }
 
   setupUIListeners() {
@@ -536,26 +535,21 @@ export class PuzzleManager {
     document.getElementById('next-page-btn').style.visibility = this.bookPageIndex === BOOK_PAGES.length - 1 ? 'hidden' : 'visible';
   }
 
-  // Updates state locally and pushes to server (if coop mode) or checks solutions locally (if solo mode)
+  // Updates state locally, evaluates solutions, and pushes to server for persistence/broadcast.
   updateStateLocal(update) {
     this.state = { ...this.state, ...update };
+
+    // Evaluate any automatic solutions locally (client-side authoritative for puzzle logic).
+    if (this.state.clockHours === 2 && this.state.clockMinutes === 40 && !this.state.bridgeRaised) {
+      this.state.bridgeRaised = true;
+      audio.playSuccess();
+    }
+
     this.updatePuzzlesUI();
 
-    if (this.mode === 'coop') {
-      this.socket.emit('puzzle_interaction', update);
-    } else {
-      // Solo mode: evaluate solutions immediately
-      // 1. Clock tower bridge solve
-      if (this.state.clockHours === 2 && this.state.clockMinutes === 40 && !this.state.bridgeRaised) {
-        this.state.bridgeRaised = true;
-        audio.playSuccess();
-      }
-      // 2. Clock gears lock solve handled in the lever click timer
-      // 3. Generator solved handled inside switch click
-      // 4. Spaceship piano solved handled inside slider change
-      // 5. Fireplace solved handled inside center button click
-      this.updatePuzzlesUI();
-    }
+    // Always send the update to the server. In coop the server broadcasts to the room;
+    // in competition/solo the server persists the player's individual progress.
+    this.socket.emit('puzzle_interaction', this.state);
   }
 
   // Shows a popup message in the chat/feed

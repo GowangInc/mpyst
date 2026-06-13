@@ -41,6 +41,7 @@ export class SlideshowManager {
 
     // Receive player lists and transitions
     this.socket.on('players_list', (list) => {
+      this.remotePlayers = {};
       list.forEach((p) => {
         if (p.id !== this.socket.id) {
           this.remotePlayers[p.id] = p;
@@ -49,17 +50,10 @@ export class SlideshowManager {
       this.renderCurrentNode();
     });
 
-    this.socket.on('player_joined', (p) => {
-      if (p.id !== this.socket.id) {
-        this.remotePlayers[p.id] = p;
-      }
-      this.renderCurrentNode();
-    });
-
     this.socket.on('player_moved_node', (p) => {
       if (this.remotePlayers[p.id]) {
         this.remotePlayers[p.id].node = p.node;
-      } else {
+      } else if (p.id !== this.socket.id) {
         this.remotePlayers[p.id] = p;
       }
       this.renderCurrentNode();

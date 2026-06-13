@@ -6,6 +6,7 @@ import { audio } from './game/Audio.js';
 const loginOverlay = document.getElementById('login-overlay');
 const joinBtn = document.getElementById('join-btn');
 const playerNameInput = document.getElementById('player-name');
+const competitionCodeInput = document.getElementById('competition-code');
 const gameHud = document.getElementById('game-hud');
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
@@ -14,8 +15,22 @@ const modeBadge = document.getElementById('player-mode-badge');
 const victoryOverlay = document.getElementById('victory-overlay');
 const victoryBook = document.getElementById('victory-book-link');
 const resetBtn = document.getElementById('reset-game-btn');
+const leaderboardPanel = document.getElementById('leaderboard-panel');
+const leaderboardList = document.getElementById('leaderboard-list');
 
 let selectedColor = '#ffd700'; // Default gold
+let playerToken = localStorage.getItem('mpyst_player_token') || '';
+let savedName = localStorage.getItem('mpyst_player_name') || '';
+let savedCode = localStorage.getItem('mpyst_competition_code') || '';
+let savedMode = localStorage.getItem('mpyst_game_mode') || 'competition';
+
+// Restore form fields
+if (savedName) playerNameInput.value = savedName;
+if (savedCode) competitionCodeInput.value = savedCode;
+if (savedMode) {
+  const modeRadio = document.querySelector(`input[name="game-mode"][value="${savedMode}"]`);
+  if (modeRadio) modeRadio.checked = true;
+}
 
 // Expose variables globally so SlideshowManager can read them
 window.playerNameInput = playerNameInput;
@@ -28,11 +43,7 @@ const socket = io();
 document.querySelectorAll('.color-btn').forEach((btn) => {
   btn.addEventListener('click', (e) => {
     audio.playClick();
-    
-    // Clear selection
     document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
-    
-    // Add selection
     btn.classList.add('selected');
     selectedColor = btn.dataset.color;
     window.selectedColor = selectedColor;
@@ -42,7 +53,13 @@ document.querySelectorAll('.color-btn').forEach((btn) => {
 // 2. Joining the game
 joinBtn.addEventListener('click', () => {
   const name = playerNameInput.value.trim() || 'Explorer';
+  const code = competitionCodeInput.value.trim().toUpperCase() || 'DEFAULT';
   const mode = document.querySelector('input[name="game-mode"]:checked').value;
+
+  if (!code) {
+    showLoginError('Please enter a competition code.');
+    return;
+  }
 
   // Initialize audio context on first user click gesture
   audio.init();
@@ -51,20 +68,49 @@ joinBtn.addEventListener('click', () => {
   joinBtn.textContent = 'Loading Island...';
   joinBtn.disabled = true;
 
+  // Persist preferences
+  localStorage.setItem('mpyst_player_name', name);
+  localStorage.setItem('mpyst_competition_code', code);
+  localStorage.setItem('mpyst_game_mode', mode);
+
   // Join the server lobby room
   socket.emit('join', {
     name: name,
     color: selectedColor,
-    mode: mode
+    mode: mode,
+    competitionCode: code,
+    playerToken: playerToken
   });
+});
+
+socket.on('joined', (data) => {
+  const { playerToken: newToken, competition, name, color } = data;
+  if (newToken) {
+    playerToken = newToken;
+    localStorage.setItem('mpyst_player_token', playerToken);
+  }
+
+  window.currentCompetition = competition;
+  const mode = competition.mode;
 
   // Setup local puzzle controller
   window.gamePuzzles = new PuzzleManager(socket, mode);
 
   // Set HUD mode badge display
-  modeBadge.textContent = mode === 'coop' ? 'Co-op Sync' : 'Solo Mode';
-  modeBadge.style.borderColor = mode === 'coop' ? '#d4af37' : '#3b82f6';
-  modeBadge.style.color = mode === 'coop' ? '#d4af37' : '#3b82f6';
+  const badgeText = {
+    competition: '🏁 Competition',
+    coop: '🤝 Co-op Sync',
+    solo: '🧭 Solo Mode'
+  }[mode] || mode;
+  modeBadge.textContent = badgeText;
+  modeBadge.style.borderColor = mode === 'coop' ? '#d4af37' : (mode === 'competition' ? '#ef4444' : '#3b82f6');
+  modeBadge.style.color = mode === 'coop' ? '#d4af37' : (mode === 'competition' ? '#ef4444' : '#3b82f6');
+
+  // Show leaderboard in competition mode
+  if (mode === 'competition') {
+    leaderboardPanel.classList.remove('hidden');
+    fetchLeaderboard(competition.code);
+  }
 
   // Instantiate Slideshow navigation engine
   window.gameEngine = new SlideshowManager(socket, mode);
@@ -73,8 +119,8 @@ joinBtn.addEventListener('click', () => {
   // Hide login overlay, reveal game screen
   loginOverlay.classList.add('hidden');
   gameHud.classList.remove('hidden');
-  
-  window.gamePuzzles.showFeedback(`Welcome to mPyst, ${name}! Click edge arrows to navigate, and click screen objects to inspect them.`);
+
+  window.gamePuzzles.showFeedback(`Welcome to mPyst, ${name}! You are in competition "${competition.name}".`);
   window.gamePuzzles.showFeedback(`<strong>🔎 NEED CLUES?</strong> Walk up the steps from the Docks to enter the <strong>Library</strong>. Inspect the <strong>bookshelf</strong> or the <strong>red & blue book podiums</strong> to read the journals containing all combinations, codes, and patterns!`);
 
   // Monitor victory book reveal state
@@ -82,19 +128,33 @@ joinBtn.addEventListener('click', () => {
     if (window.gamePuzzles && window.gamePuzzles.state.mystBookRevealed && !window.victoryChimePlayed) {
       window.victoryChimePlayed = true;
       audio.playSuccess();
-      
-      // Auto-navigate to fireplace node close-up to see the open wall
       if (window.gameEngine) {
         window.gameEngine.navigateToNode('fireplace_node');
       }
-
-      // Show victory overlay after a short delay
       setTimeout(() => {
         victoryOverlay.classList.remove('hidden');
       }, 1500);
     }
   }, 1000);
 });
+
+socket.on('join_error', (err) => {
+  joinBtn.textContent = 'Enter Island';
+  joinBtn.disabled = false;
+  showLoginError(err.message || 'Could not join the competition.');
+});
+
+function showLoginError(msg) {
+  let errorEl = document.getElementById('login-error');
+  if (!errorEl) {
+    errorEl = document.createElement('p');
+    errorEl.id = 'login-error';
+    errorEl.style.color = 'var(--danger)';
+    errorEl.style.marginTop = '12px';
+    loginOverlay.querySelector('.login-card').appendChild(errorEl);
+  }
+  errorEl.textContent = msg;
+}
 
 // 3. Chat form submission
 chatForm.addEventListener('submit', (e) => {
@@ -111,25 +171,74 @@ socket.on('chat_received', (data) => {
   const msg = document.createElement('div');
   msg.className = 'chat-msg';
   msg.style.setProperty('--sender-color', data.color);
-  
+
   const nameSpan = document.createElement('span');
   nameSpan.className = 'sender';
   nameSpan.textContent = `${data.sender}:`;
-  
+
   const textSpan = document.createElement('span');
   textSpan.textContent = data.text;
-  
+
   msg.appendChild(nameSpan);
   msg.appendChild(textSpan);
-  
+
   chatMessages.appendChild(msg);
   chatMessages.scrollTop = chatMessages.scrollHeight;
-  
-  // Play subtle sound for new message if logged in
+
   if (loginOverlay.classList.contains('hidden')) {
     audio.playClick();
   }
 });
+
+// Leaderboard updates
+socket.on('leaderboard_update', (data) => {
+  if (window.currentCompetition && data.competitionCode === window.currentCompetition.code) {
+    renderLeaderboard(data.leaderboard);
+  }
+});
+
+async function fetchLeaderboard(code) {
+  try {
+    const res = await fetch(`/api/competitions/${code}/leaderboard`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderLeaderboard(data);
+  } catch (e) {
+    console.error('Leaderboard fetch failed', e);
+  }
+}
+
+function renderLeaderboard(players) {
+  leaderboardList.innerHTML = '';
+  if (!players || players.length === 0) {
+    leaderboardList.innerHTML = '<div class="leaderboard-row">No players yet.</div>';
+    return;
+  }
+  players.forEach((p, idx) => {
+    const progress = calculateProgress(p.progress);
+    const row = document.createElement('div');
+    row.className = 'leaderboard-row';
+    row.innerHTML = `
+      <span class="leaderboard-rank">#${idx + 1}</span>
+      <span class="leaderboard-dot" style="background:${p.color || '#ffd700'}"></span>
+      <span class="leaderboard-name">${p.name}</span>
+      <span class="leaderboard-progress">${progress}%</span>
+    `;
+    leaderboardList.appendChild(row);
+  });
+}
+
+function calculateProgress(progress) {
+  if (!progress || typeof progress !== 'object') return 0;
+  const checks = [
+    progress.bridgeRaised,
+    progress.elevatorPowered,
+    progress.generatorSolved,
+    progress.spaceshipSolved,
+    progress.mystBookRevealed
+  ];
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+}
 
 // 4. Final Victory book interaction
 victoryBook.addEventListener('click', () => {
@@ -140,19 +249,15 @@ victoryBook.addEventListener('click', () => {
 // 5. Reset Game state
 resetBtn.addEventListener('click', () => {
   audio.playClick();
-  
-  // Hide overlays
   victoryOverlay.classList.add('hidden');
   window.victoryChimePlayed = false;
-  
-  // Send player back to docks starting point
+
   if (window.gameEngine) {
     window.gameEngine.navigateToNode('docks');
     window.gameEngine.closeActivePuzzle();
   }
-  
+
   if (window.gamePuzzles) {
-    // Reset global cooperative state on server (or client if solo)
     window.gamePuzzles.updateStateLocal({
       clockHours: 12,
       clockMinutes: 0,
@@ -166,8 +271,6 @@ resetBtn.addEventListener('click', () => {
       spaceshipSolved: false,
       mystBookRevealed: false
     });
-    
-    // Reset fireplace grid locally
     window.gamePuzzles.fpPanels = Array(9).fill(false);
     document.querySelectorAll('.fire-plate').forEach(plate => plate.classList.remove('active'));
   }
@@ -188,4 +291,3 @@ if (toggleNav && navContainer) {
     audio.playClick();
   });
 }
-

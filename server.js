@@ -5,25 +5,62 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import fs from 'fs';
+import {
+  initDatabase,
+  generateToken,
+  hashPassword,
+  createCompetition,
+  getCompetitionByCode,
+  getCompetitionById,
+  listCompetitions,
+  updateCompetitionActive,
+  deleteCompetition,
+  resetCompetition,
+  getPlayerCount,
+  createPlayer,
+  getPlayerByToken,
+  updatePlayerName,
+  savePlayerProgress,
+  touchPlayer,
+  getPlayersByCompetition,
+  getLeaderboard,
+  recordEvent,
+  getRecentEvents
+} from './server/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
+const ADMIN_PASSWORD = process.env.MPYST_ADMIN_PASSWORD || 'mpyst-admin';
+const ADMIN_TOKEN = hashPassword(ADMIN_PASSWORD);
 
-async function startServer() {
-  const app = express();
-  const httpServer = createServer(app);
-  const io = new Server(httpServer, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
-    }
-  });
+initDatabase();
 
-  // Global Cooperative Puzzle State
-  let coopPuzzleState = {
+// Ensure a fallback default competition exists so the island is always joinable
+if (!getCompetitionByCode('DEFAULT')) {
+  createCompetition({ code: 'DEFAULT', name: 'Default Island', mode: 'coop', maxPlayers: 20 });
+}
+
+let io;
+
+// In-memory runtime state for active competitions
+const activeCompetitions = new Map(); // competitionId -> { coopState, sockets: Set() }
+const onlinePlayers = new Map(); // socketId -> { player, competitionId, socket }
+
+function getOrCreateActiveCompetition(competitionId) {
+  if (!activeCompetitions.has(competitionId)) {
+    activeCompetitions.set(competitionId, {
+      coopState: createInitialPuzzleState(),
+      sockets: new Set()
+    });
+  }
+  return activeCompetitions.get(competitionId);
+}
+
+function createInitialPuzzleState() {
+  return {
     clockHours: 12,
     clockMinutes: 0,
     bridgeRaised: false,
@@ -36,86 +73,323 @@ async function startServer() {
     spaceshipSolved: false,
     mystBookRevealed: false
   };
+}
 
-  // Keep track of connected players
-  const players = {};
+function requireAdmin(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.body?.adminToken || req.query?.adminToken;
+  if (token !== ADMIN_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
 
+function broadcastLeaderboard(competitionId) {
+  const leaderboard = getLeaderboard(competitionId);
+  const competition = getCompetitionById(competitionId);
+  io.to(`competition:${competitionId}`).emit('leaderboard_update', {
+    competitionCode: competition?.code,
+    leaderboard
+  });
+}
+
+function broadcastPlayers(competitionId) {
+  const players = getPlayersByCompetition(competitionId);
+  const onlineList = Array.from(onlinePlayers.values())
+    .filter(p => p.competitionId === competitionId)
+    .map(p => ({
+      id: p.socket.id,
+      name: p.player.name,
+      color: p.player.color,
+      node: p.socket.currentNode || 'docks'
+    }));
+
+  io.to(`competition:${competitionId}`).emit('players_list', onlineList);
+}
+
+async function startServer() {
+  const app = express();
+  const httpServer = createServer(app);
+  io = new Server(httpServer, {
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST']
+    }
+  });
+
+  app.use(express.json());
+
+  // ========== ADMIN API ==========
+  app.post('/api/admin/login', (req, res) => {
+    const { password } = req.body || {};
+    if (hashPassword(password) !== ADMIN_TOKEN) {
+      return res.status(401).json({ error: 'Invalid admin password' });
+    }
+    res.json({ token: ADMIN_TOKEN });
+  });
+
+  app.get('/api/admin/competitions', requireAdmin, (req, res) => {
+    const competitions = listCompetitions();
+    const enriched = competitions.map(c => ({
+      ...c,
+      playerCount: getPlayerCount(c.id)
+    }));
+    res.json(enriched);
+  });
+
+  app.post('/api/admin/competitions', requireAdmin, (req, res) => {
+    const { code, name, mode = 'competition', maxPlayers = 20, adminPassword } = req.body || {};
+    if (!code || !name) {
+      return res.status(400).json({ error: 'code and name are required' });
+    }
+    try {
+      const adminPasswordHash = adminPassword ? hashPassword(adminPassword) : null;
+      const competition = createCompetition({
+        code,
+        name,
+        mode,
+        maxPlayers: Math.min(Math.max(parseInt(maxPlayers) || 20, 1), 20),
+        adminPasswordHash
+      });
+      res.json(competition);
+    } catch (err) {
+      res.status(409).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/admin/competitions/:code', requireAdmin, (req, res) => {
+    const competition = getCompetitionByCode(req.params.code);
+    if (!competition) return res.status(404).json({ error: 'Competition not found' });
+
+    const leaderboard = getLeaderboard(competition.id);
+    const events = getRecentEvents(competition.id, 200);
+    res.json({ competition, leaderboard, events });
+  });
+
+  app.post('/api/admin/competitions/:code/toggle', requireAdmin, (req, res) => {
+    const competition = getCompetitionByCode(req.params.code);
+    if (!competition) return res.status(404).json({ error: 'Competition not found' });
+    const updated = updateCompetitionActive(competition.id, !competition.active);
+    res.json(updated);
+  });
+
+  app.post('/api/admin/competitions/:code/reset', requireAdmin, (req, res) => {
+    const competition = getCompetitionByCode(req.params.code);
+    if (!competition) return res.status(404).json({ error: 'Competition not found' });
+    resetCompetition(competition.id);
+    const active = getOrCreateActiveCompetition(competition.id);
+    active.coopState = createInitialPuzzleState();
+    broadcastLeaderboard(competition.id);
+    res.json({ success: true });
+  });
+
+  app.delete('/api/admin/competitions/:code', requireAdmin, (req, res) => {
+    const competition = getCompetitionByCode(req.params.code);
+    if (!competition) return res.status(404).json({ error: 'Competition not found' });
+    deleteCompetition(competition.id);
+    activeCompetitions.delete(competition.id);
+    res.json({ success: true });
+  });
+
+  // ========== PUBLIC API ==========
+  app.get('/api/competitions/:code', (req, res) => {
+    const competition = getCompetitionByCode(req.params.code);
+    if (!competition) return res.status(404).json({ error: 'Competition not found' });
+    // Don't expose password hash
+    const { admin_password_hash, ...safe } = competition;
+    res.json(safe);
+  });
+
+  app.get('/api/competitions/:code/leaderboard', (req, res) => {
+    const competition = getCompetitionByCode(req.params.code);
+    if (!competition) return res.status(404).json({ error: 'Competition not found' });
+    res.json(getLeaderboard(competition.id));
+  });
+
+  // ========== ADMIN PANEL ==========
+  app.get('/admin', async (req, res, next) => {
+    try {
+      if (isProd) {
+        res.sendFile(path.join(__dirname, 'dist', 'admin.html'));
+      } else {
+        let template = fs.readFileSync(path.resolve(__dirname, 'admin.html'), 'utf-8');
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      }
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // ========== SOCKET.IO ==========
   io.on('connection', (socket) => {
-    console.log(`Player connected: ${socket.id}`);
+    socket.on('join', async (playerData) => {
+      const { name, color, mode, competitionCode, playerToken } = playerData || {};
 
-    // Join player
-    socket.on('join', (playerData) => {
-      players[socket.id] = {
-        id: socket.id,
-        name: playerData.name || 'Anonymous',
-        color: playerData.color || '#ffd700',
-        mode: playerData.mode || 'coop',
-        node: 'docks'
+      const competition = getCompetitionByCode(competitionCode || 'DEFAULT');
+      if (!competition) {
+        socket.emit('join_error', { message: 'Competition not found. Ask your teacher for the code.' });
+        return;
+      }
+      if (!competition.active) {
+        socket.emit('join_error', { message: 'This competition is not currently active.' });
+        return;
+      }
+
+      const active = getOrCreateActiveCompetition(competition.id);
+
+      // Reconnect by token if the competition matches, otherwise create a new player.
+      let player;
+      if (playerToken) {
+        const existing = getPlayerByToken(playerToken);
+        if (existing && existing.competitionId === competition.id) {
+          player = existing;
+        }
+      }
+
+      if (!player) {
+        // Enforce max players across all registered players for this competition
+        const currentCount = getPlayerCount(competition.id);
+        if (currentCount >= competition.max_players) {
+          socket.emit('join_error', { message: `This competition is full (${competition.max_players} players max).` });
+          return;
+        }
+        player = createPlayer({
+          token: generateToken(),
+          name: name || 'Explorer',
+          color: color || '#ffd700',
+          competitionId: competition.id,
+          progress: createInitialPuzzleState()
+        });
+      } else {
+        // Update name/color if changed
+        player = updatePlayerName(player.token, name || player.name, color || player.color);
+      }
+
+      // Resolve effective mode: competition code mode overrides client mode
+      const effectiveMode = competition.mode === 'competition' ? 'competition' : (mode || 'coop');
+
+      socket.join(`competition:${competition.id}`);
+      active.sockets.add(socket.id);
+
+      const onlinePlayer = {
+        socket,
+        player,
+        competitionId: competition.id,
+        mode: effectiveMode
       };
+      onlinePlayers.set(socket.id, onlinePlayer);
 
-      // Send list of all existing players to the new player
-      socket.emit('players_list', Object.values(players));
+      socket.emit('joined', {
+        playerToken: player.token,
+        competition: {
+          id: competition.id,
+          code: competition.code,
+          name: competition.name,
+          mode: effectiveMode
+        },
+        name: player.name,
+        color: player.color
+      });
 
-      // Send the current cooperative puzzle state to the player (if they are in coop mode)
-      if (players[socket.id].mode === 'coop') {
-        socket.emit('puzzle_state', coopPuzzleState);
+      // Send current puzzle state
+      if (effectiveMode === 'coop') {
+        // Merge player's saved progress into the in-memory coop state if coop state is fresh
+        if (Object.keys(active.coopState).every(k => !active.coopState[k] || active.coopState[k] === createInitialPuzzleState()[k])) {
+          active.coopState = { ...createInitialPuzzleState(), ...player.progress, ...active.coopState };
+        }
+        socket.emit('puzzle_state', active.coopState);
+      } else {
+        socket.emit('puzzle_state', player.progress);
       }
 
-      // Broadcast new player to everyone else
-      socket.broadcast.emit('player_joined', players[socket.id]);
+      broadcastPlayers(competition.id);
+      broadcastLeaderboard(competition.id);
+
+      recordEvent({
+        competitionId: competition.id,
+        playerId: player.id,
+        eventType: 'join',
+        data: { name: player.name, mode: effectiveMode }
+      });
     });
 
-    // Handle slideshow node transition
     socket.on('move_node', (nodeData) => {
-      if (players[socket.id]) {
-        players[socket.id].node = nodeData.node;
-        // Broadcast to all other players
-        socket.broadcast.emit('player_moved_node', players[socket.id]);
-      }
+      const op = onlinePlayers.get(socket.id);
+      if (!op) return;
+      socket.currentNode = nodeData.node || 'docks';
+      socket.to(`competition:${op.competitionId}`).emit('player_moved_node', {
+        id: socket.id,
+        name: op.player.name,
+        color: op.player.color,
+        node: socket.currentNode
+      });
     });
 
-    // Handle player pointing/action events
     socket.on('player_action', (actionData) => {
-      if (players[socket.id]) {
-        socket.broadcast.emit('player_action_triggered', {
-          id: socket.id,
-          ...actionData
-        });
-      }
+      const op = onlinePlayers.get(socket.id);
+      if (!op) return;
+      socket.to(`competition:${op.competitionId}`).emit('player_action_triggered', {
+        id: socket.id,
+        name: op.player.name,
+        color: op.player.color,
+        ...actionData
+      });
     });
 
-    // Handle chat message
     socket.on('chat_message', (msg) => {
-      if (players[socket.id]) {
-        io.emit('chat_received', {
-          sender: players[socket.id].name,
-          color: players[socket.id].color,
-          text: msg
-        });
-      }
+      const op = onlinePlayers.get(socket.id);
+      if (!op) return;
+      io.to(`competition:${op.competitionId}`).emit('chat_received', {
+        sender: op.player.name,
+        color: op.player.color,
+        text: msg
+      });
     });
 
-    // Handle cooperative puzzle interaction
     socket.on('puzzle_interaction', (update) => {
-      if (players[socket.id] && players[socket.id].mode === 'coop') {
-        // Merge updates into global coopPuzzleState
-        coopPuzzleState = { ...coopPuzzleState, ...update };
-        // Broadcast new state to all players
-        io.emit('puzzle_update', coopPuzzleState);
+      const op = onlinePlayers.get(socket.id);
+      if (!op) return;
+
+      const competition = getCompetitionById(op.competitionId);
+      const active = getOrCreateActiveCompetition(op.competitionId);
+      const effectiveMode = competition?.mode === 'competition' ? 'competition' : (op.mode || 'coop');
+      op.mode = effectiveMode;
+
+      if (effectiveMode === 'coop') {
+        active.coopState = { ...active.coopState, ...update };
+        io.to(`competition:${op.competitionId}`).emit('puzzle_update', active.coopState);
+      } else {
+        const player = getPlayerByToken(op.player.token);
+        const newProgress = { ...player.progress, ...update };
+        savePlayerProgress(op.player.token, newProgress);
+        op.player = getPlayerByToken(op.player.token); // refresh local ref
+        socket.emit('puzzle_update', newProgress);
       }
+
+      // Persist the interaction as an event for admin auditing
+      recordEvent({
+        competitionId: op.competitionId,
+        playerId: op.player.id,
+        eventType: 'puzzle_interaction',
+        data: { update }
+      });
+
+      broadcastLeaderboard(op.competitionId);
     });
 
-    // Handle disconnection
     socket.on('disconnect', () => {
-      console.log(`Player disconnected: ${socket.id}`);
-      if (players[socket.id]) {
-        delete players[socket.id];
-        io.emit('player_left', socket.id);
+      const op = onlinePlayers.get(socket.id);
+      if (op) {
+        const active = getOrCreateActiveCompetition(op.competitionId);
+        active.sockets.delete(socket.id);
+        onlinePlayers.delete(socket.id);
+        socket.to(`competition:${op.competitionId}`).emit('player_left', socket.id);
+        broadcastPlayers(op.competitionId);
       }
     });
   });
 
-  // Serve static files / Vite middleware
+  // ========== STATIC / VITE ==========
   let vite;
   if (!isProd) {
     vite = await createViteServer({
@@ -127,10 +401,10 @@ async function startServer() {
     app.use(express.static(path.join(__dirname, 'dist')));
   }
 
-  // Route to serve index.html (with Vite HTML transform in dev mode)
   app.use('*', async (req, res, next) => {
     const url = req.originalUrl;
     try {
+      if (url === '/admin') return next(); // handled above
       if (isProd) {
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
       } else {
@@ -146,7 +420,11 @@ async function startServer() {
 
   httpServer.listen(PORT, () => {
     console.log(`Server is running at http://localhost:${PORT}`);
+    console.log(`Admin panel: http://localhost:${PORT}/admin`);
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});

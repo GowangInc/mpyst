@@ -1,8 +1,13 @@
 # mPyst
 
-A browser-based, cooperative multiplayer point-and-click puzzle adventure inspired by the classic game **Myst**. Players explore a pre-rendered island scene-by-scene, solve shared (or solo) puzzles, and communicate through an in-game chat to unlock the final Myst Book.
+A browser-based, multiplayer point-and-click puzzle adventure inspired by the classic game **Myst**. Students explore a pre-rendered island scene-by-scene, solve puzzles, and race or collaborate to unlock the final Myst Book.
 
-Built for the classroom: students can drop into the same island session, work together in **Cooperative** mode where puzzle progress is shared, or play at their own pace in **Solo Explorer** mode while still seeing and chatting with others.
+Built for the classroom:
+- **Competition mode** — classes race to solve all puzzles first with a live leaderboard.
+- **Cooperative mode** — the whole class shares puzzle progress.
+- **Solo Explorer mode** — students solve individually while still seeing and chatting with others.
+- **Separate competitions** — create different codes for Year 7, Year 8, or any group so progress is isolated.
+- **Persistent usernames & progress** — students can close their browser and pick up exactly where they left off.
 
 ---
 
@@ -10,7 +15,10 @@ Built for the classroom: students can drop into the same island session, work to
 
 - **Slideshow-style exploration** — Navigate a node-based graph of pre-rendered island scenes (Docks, Library, Clock Tower, Generator Cabin, Spaceship, and more).
 - **Real-time multiplayer** — Socket.IO keeps every player's location, actions, and puzzle state in sync.
-- **Cooperative vs Solo modes** — Choose whether puzzle progress is shared across all players or solved independently.
+- **Competition, Cooperative, and Solo modes** — Choose whether students race, share progress, or solve independently.
+- **Teacher admin panel** — Create competitions, monitor live progress, view leaderboards, and reset/delete sessions at `/admin`.
+- **Persistent player tokens** — Progress and usernames are saved in SQLite so students can resume later.
+- **Isolated competitions** — Each competition code is a separate room with its own leaderboard (up to 20 players each).
 - **Five interlocking puzzles** — Clock valve, clock-tower gear lock, voltage switchboard, spaceship pitch/piano console, and a 3×3 fireplace grid.
 - **In-world clue system** — A journal in the Library contains the combinations and formulas needed to advance.
 - **Live chat HUD** — Players can coordinate, ask for help, or receive system feedback.
@@ -26,6 +34,7 @@ Built for the classroom: students can drop into the same island session, work to
 | Runtime | Node.js 18+ |
 | Server | Express + native `http` server |
 | Real-time | Socket.IO |
+| Database | SQLite (better-sqlite3) |
 | Front-end | Vanilla ES modules, HTML5, CSS3 |
 | Build tool | Vite |
 | Audio | Web Audio API (synthesized) |
@@ -48,7 +57,7 @@ npm run dev
 
 The server starts on `http://localhost:3000` by default.
 
-Open the URL in one or more browser tabs to test multiplayer locally.
+Open the URL in one or more browser tabs to test multiplayer locally. The admin panel is at `http://localhost:3000/admin`.
 
 ### 3. Build for production
 
@@ -61,7 +70,7 @@ This outputs a static bundle to `dist/`.
 ### 4. Run in production mode
 
 ```bash
-NODE_ENV=production npm start
+NODE_ENV=production PORT=3000 npm start
 ```
 
 The production server serves the files from `dist/`. Set the `PORT` environment variable to change the listening port:
@@ -70,6 +79,26 @@ The production server serves the files from `dist/`. Set the `PORT` environment 
 PORT=8080 NODE_ENV=production npm start
 ```
 
+### 5. Admin password
+
+Set the admin password with an environment variable (default is `mpyst-admin`):
+
+```bash
+MPYST_ADMIN_PASSWORD=your-secure-password npm start
+```
+
+---
+
+## Teacher Workflow
+
+1. Open `/admin` and log in with the admin password.
+2. Click **Create Competition**, choose a code like `YEAR7A`, a display name, and a mode.
+3. Share the competition code with your class.
+4. Students enter the code on the main page, pick a name/color, and click **Enter Island**.
+5. Watch live progress and the leaderboard from the admin panel.
+
+Each competition is isolated, so `YEAR7A` and `YEAR8A` will have completely separate players and leaderboards.
+
 ---
 
 ## Project Structure
@@ -77,9 +106,12 @@ PORT=8080 NODE_ENV=production npm start
 ```
 mpyst/
 ├── server.js              # Express + Socket.IO server, serves Vite in dev and dist/ in production
-├── index.html             # Main page + all UI overlays
+├── admin.html             # Teacher admin dashboard
+├── index.html             # Main game page + all UI overlays
 ├── package.json           # Project metadata and scripts
 ├── vite.config.js         # Vite configuration
+├── server/
+│   └── db.js              # SQLite schema and helper functions
 ├── public/
 │   └── assets/            # Pre-rendered scene PNGs (island slideshow images)
 ├── src/
@@ -96,7 +128,7 @@ mpyst/
 
 ## Gameplay & Puzzles
 
-When a player joins they choose a name, avatar color, and mode. After entering the island, navigation is done by clicking edge arrows or clicking hotspots directly on the scene image.
+When a player joins they choose a name, avatar color, competition code, and mode. After entering the island, navigation is done by clicking edge arrows or clicking hotspots directly on the scene image.
 
 ### Puzzle Progression
 
@@ -130,17 +162,24 @@ The final Myst Book only appears after the gear lock, generator, spaceship melod
 
 ## Multiplayer Modes
 
-### Cooperative (default)
+### Competition (default)
 
-- Puzzle state is stored on the server and broadcast to all connected players.
+- Each student races to solve the puzzles independently.
+- Progress is persisted to the database and restored on reconnect.
+- A live leaderboard shows who has solved the most puzzles.
+- Up to 20 players per competition code.
+
+### Cooperative
+
+- Puzzle state is shared across all players in the competition.
 - Solving one puzzle unlocks it for everyone.
 - Players see who else is on the same scene.
 
 ### Solo Explorer
 
-- Each player solves puzzles independently on the client.
+- Each player solves puzzles independently.
 - Players can still see each other's locations and use the chat.
-- Use this mode if you want every student to experience the full puzzle sequence on their own.
+- Progress is still persisted so students can resume later.
 
 ---
 

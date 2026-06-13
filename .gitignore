@@ -5,3 +5,6 @@ dist/
 *.local
 .vscode/
 .idea/
+mpyst.db
+mpyst.db-*
+test-socket*.mjs
