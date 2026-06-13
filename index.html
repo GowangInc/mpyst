@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mPyst - Cooperative Multiplayer Island</title>
+  <!-- Google Fonts for Myst-like academic / Roman feel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+  <!-- Socket.io client script -->
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <!-- Slideshow Viewport -->
+  <div id="slideshow-container">
+    <div id="slideshow-viewport">
+      <img id="scene-image" src="" alt="Myst Scene">
+      
+      <!-- Hotspots layer (directional arrows) -->
+      <div id="nav-hotspots">
+        <button class="nav-arrow arrow-forward" data-type="forward">&#9650;</button>
+        <button class="nav-arrow arrow-left" data-type="left">&#9664;</button>
+        <button class="nav-arrow arrow-right" data-type="right">&#9654;</button>
+        <button class="nav-arrow arrow-back" data-type="back">&#9660;</button>
+      </div>
+
+      <!-- Action hotspots layer (clickable nodes for puzzles) -->
+      <div id="action-hotspots"></div>
+
+      <!-- Nearby Players Panel -->
+      <div id="node-players-panel">
+        <span class="panel-label">Here:</span>
+        <div id="node-players-list"></div>
+      </div>
+
+      <!-- INLINE PUZZLE OVERLAYS ALIGNED WITH PRE-RENDERED SCENERY -->
+      <div id="puzzle-overlay-container">
+        
+        <!-- 1. Docks Clock Valve Overlay -->
+        <div id="overlay-clock-valve" class="puzzle-overlay-panel hidden">
+          <div class="valve-wheel" id="hours-valve" style="position: absolute; left: 16%; top: 58%; width: 60px; height: 60px;" title="Rotate Hour Valve"></div>
+          <div class="valve-wheel" id="minutes-valve" style="position: absolute; left: 74%; top: 58%; width: 60px; height: 60px;" title="Rotate Minute Valve"></div>
+          
+          <div class="clock-display" style="position: absolute; left: 38%; top: 22%; width: 24%; height: 20%; display: flex; flex-direction: column; align-items: center;">
+            <div class="clock-face" style="width: 65px; height: 65px; border-radius: 50%; border: 3px solid #f3f4f6; position: relative; background: #0d131f; box-shadow: 0 4px 8px rgba(0,0,0,0.5);">
+              <div class="clock-hand hour-hand" id="hud-hour-hand" style="position: absolute; bottom: 50%; left: 50%; width: 3.5px; height: 20px; background: var(--gold); transform-origin: bottom center; transform: translateX(-50%) rotate(0deg);"></div>
+              <div class="clock-hand minute-hand" id="hud-minute-hand" style="position: absolute; bottom: 50%; left: 50%; width: 1.5px; height: 28px; background: #f3f4f6; transform-origin: bottom center; transform: translateX(-50%) rotate(0deg);"></div>
+            </div>
+            <div id="digital-time" style="font-family: monospace; font-size: 1.1rem; color: var(--gold); background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px; margin-top: 10px; letter-spacing: 1px;">12:00</div>
+          </div>
+          <button id="clock-submit-btn" class="mystic-btn" style="position: absolute; left: 35%; top: 82%; width: 30%; padding: 8px;">Confirm Time</button>
+        </div>
+
+        <!-- 2. Clock Tower Gears Overlay -->
+        <div id="overlay-clock-gears" class="puzzle-overlay-panel hidden">
+          <div class="gear-combo-box" style="position: absolute; left: 24%; top: 52%; width: 36%; height: 20%; display: flex; justify-content: space-between;">
+            <div class="wheel-group">
+              <button class="arrow-up" data-wheel="d1" style="font-size: 1.2rem; color: var(--gold); cursor: pointer;">▲</button>
+              <div class="gear-digit" id="gear-d1" style="font-size: 1.6rem; font-family: monospace; color:#fff; background:#111; border: 1px solid var(--gold); padding: 4px 10px; border-radius: 4px;">1</div>
+              <button class="arrow-down" data-wheel="d1" style="font-size: 1.2rem; color: var(--gold); cursor: pointer;">▼</button>
+            </div>
+            <div class="wheel-group">
+              <button class="arrow-up" data-wheel="d2" style="font-size: 1.2rem; color: var(--gold); cursor: pointer;">▲</button>
+              <div class="gear-digit" id="gear-d2" style="font-size: 1.6rem; font-family: monospace; color:#fff; background:#111; border: 1px solid var(--gold); padding: 4px 10px; border-radius: 4px;">1</div>
+              <button class="arrow-down" data-wheel="d2" style="font-size: 1.2rem; color: var(--gold); cursor: pointer;">▼</button>
+            </div>
+            <div class="wheel-group">
+              <button class="arrow-up" data-wheel="d3" style="font-size: 1.2rem; color: var(--gold); cursor: pointer;">▲</button>
+              <div class="gear-digit" id="gear-d3" style="font-size: 1.6rem; font-family: monospace; color:#fff; background:#111; border: 1px solid var(--gold); padding: 4px 10px; border-radius: 4px;">1</div>
+              <button class="arrow-down" data-wheel="d3" style="font-size: 1.2rem; color: var(--gold); cursor: pointer;">▼</button>
+            </div>
+          </div>
+          <div class="lever-wrapper" style="position: absolute; left: 78%; top: 44%; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <div class="lever-arm" id="gear-lever" style="width: 10px; height: 75px; background: #333; position: relative; cursor: pointer; transform-origin: bottom center; border-radius: 4px;">
+              <div class="lever-handle" style="width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle, red 0%, darkred 100%); position: absolute; top: -11px; left: -6px; box-shadow: 0 3px 5px rgba(0,0,0,0.5);"></div>
+            </div>
+            <span style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase;">Lever</span>
+          </div>
+        </div>
+
+        <!-- 3. Generator Switchboard Overlay -->
+        <div id="overlay-generator" class="puzzle-overlay-panel hidden">
+          <div class="voltage-meter" style="position: absolute; left: 50%; top: 32%; width: 14%; height: 20%; display: flex; flex-direction: column; align-items: center;">
+            <div class="meter-dial" style="width: 80px; height: 40px; border-top-left-radius: 40px; border-top-right-radius: 40px; border: 2.5px solid #333; border-bottom: none; position: relative; background: #0c1217; overflow: hidden;">
+              <div class="meter-needle" id="voltage-needle" style="width: 3px; height: 36px; background: var(--gold); position: absolute; bottom: 0; left: 50%; transform-origin: bottom center; transform: translateX(-50%) rotate(-90deg); transition: transform 0.4s;"></div>
+            </div>
+            <div class="voltage-readout" style="font-family: monospace; font-size: 0.95rem; color: var(--gold); margin-top: 6px; font-weight: bold;"><span id="voltage-value">0</span> / 59V</div>
+          </div>
+
+          <div class="switches-grid" style="position: absolute; left: 13%; top: 32%; width: 22%; height: 32%; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+            <!-- 10 switches generated dynamically by JS -->
+          </div>
+
+          <button id="reset-voltage-btn" class="mystic-btn hidden" style="position: absolute; left: 42%; top: 78%; width: 16%; padding: 6px; font-size: 0.8rem;">Reset Breaker</button>
+        </div>
+
+        <!-- 4. Spaceship Console Overlay -->
+        <div id="overlay-spaceship" class="puzzle-overlay-panel hidden">
+          <div style="position: absolute; left: 31%; top: 22%; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Power: <span id="piano-power-status" class="status-offline">OFFLINE</span></div>
+          
+          <div class="sliders-row" style="position: absolute; left: 35%; top: 37%; width: 30%; height: 16%; display: flex; justify-content: space-around;">
+            <div class="pitch-slider-container"><input type="range" class="pitch-slider" data-idx="0" min="0" max="12" value="0" style="writing-mode: vertical-lr; direction: rtl; width: 8px; height: 80px; accent-color: var(--gold); cursor: ns-resize;"></div>
+            <div class="pitch-slider-container"><input type="range" class="pitch-slider" data-idx="1" min="0" max="12" value="0" style="writing-mode: vertical-lr; direction: rtl; width: 8px; height: 80px; accent-color: var(--gold); cursor: ns-resize;"></div>
+            <div class="pitch-slider-container"><input type="range" class="pitch-slider" data-idx="2" min="0" max="12" value="0" style="writing-mode: vertical-lr; direction: rtl; width: 8px; height: 80px; accent-color: var(--gold); cursor: ns-resize;"></div>
+            <div class="pitch-slider-container"><input type="range" class="pitch-slider" data-idx="3" min="0" max="12" value="0" style="writing-mode: vertical-lr; direction: rtl; width: 8px; height: 80px; accent-color: var(--gold); cursor: ns-resize;"></div>
+            <div class="pitch-slider-container"><input type="range" class="pitch-slider" data-idx="4" min="0" max="12" value="0" style="writing-mode: vertical-lr; direction: rtl; width: 8px; height: 80px; accent-color: var(--gold); cursor: ns-resize;"></div>
+          </div>
+
+          <div class="keyboard" id="piano-keyboard" style="position: absolute; left: 24%; top: 58%; width: 52%; height: 18%; display: flex; justify-content: center;">
+            <div class="piano-key white-key" data-note="C4" style="width: 38px; height: 100%; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 0 0 3px 3px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 0.65rem; color:#888;">C</div>
+            <div class="piano-key black-key" data-note="C#4" style="width: 22px; height: 60%; background: #111; margin-left: -11px; margin-right: -11px; z-index: 2; cursor: pointer; border-radius: 0 0 2px 2px;"></div>
+            <div class="piano-key white-key" data-note="D4" style="width: 38px; height: 100%; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 0 0 3px 3px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 0.65rem; color:#888;">D</div>
+            <div class="piano-key black-key" data-note="D#4" style="width: 22px; height: 60%; background: #111; margin-left: -11px; margin-right: -11px; z-index: 2; cursor: pointer; border-radius: 0 0 2px 2px;"></div>
+            <div class="piano-key white-key" data-note="E4" style="width: 38px; height: 100%; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 0 0 3px 3px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 0.65rem; color:#888;">E</div>
+            <div class="piano-key white-key" data-note="F4" style="width: 38px; height: 100%; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 0 0 3px 3px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 0.65rem; color:#888;">F</div>
+            <div class="piano-key black-key" data-note="F#4" style="width: 22px; height: 60%; background: #111; margin-left: -11px; margin-right: -11px; z-index: 2; cursor: pointer; border-radius: 0 0 2px 2px;"></div>
+            <div class="piano-key white-key" data-note="G4" style="width: 38px; height: 100%; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 0 0 3px 3px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 0.65rem; color:#888;">G</div>
+            <div class="piano-key black-key" data-note="G#4" style="width: 22px; height: 60%; background: #111; margin-left: -11px; margin-right: -11px; z-index: 2; cursor: pointer; border-radius: 0 0 2px 2px;"></div>
+            <div class="piano-key white-key" data-note="A4" style="width: 38px; height: 100%; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 0 0 3px 3px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 0.65rem; color:#888;">A</div>
+            <div class="piano-key black-key" data-note="A#4" style="width: 22px; height: 60%; background: #111; margin-left: -11px; margin-right: -11px; z-index: 2; cursor: pointer; border-radius: 0 0 2px 2px;"></div>
+            <div class="piano-key white-key" data-note="B4" style="width: 38px; height: 100%; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 0 0 3px 3px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 0.65rem; color:#888;">B</div>
+            <div class="piano-key white-key" data-note="C5" style="width: 38px; height: 100%; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 0 0 3px 3px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 0.65rem; color:#888;">C5</div>
+          </div>
+
+          <button id="play-clue-btn" class="mystic-btn" style="position: absolute; left: 45%; top: 78%; width: 12%; padding: 6px; font-size: 0.8rem;">Play Clue</button>
+        </div>
+
+        <!-- 5. Fireplace Grid Overlay -->
+        <div id="overlay-fireplace" class="puzzle-overlay-panel hidden">
+          <div class="fireplace-grid" id="fireplace-plate-grid" style="position: absolute; left: 35%; top: 32%; width: 30%; height: 40%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+            <!-- 3x3 grid tiles generated dynamically by JS -->
+          </div>
+          <button id="fireplace-enter-btn" class="mystic-btn" style="position: absolute; left: 35%; top: 78%; width: 30%; padding: 8px;">Press Center Plate</button>
+        </div>
+
+      </div>
+
+      <!-- Library Book Clues Viewer Modal -->
+      <div id="puzzle-book" class="puzzle-modal hidden">
+        <div class="book-card">
+          <button class="close-puzzle-btn">&times;</button>
+          <div class="book-workspace">
+            <button id="prev-page-btn" class="page-nav-btn">&larr;</button>
+            
+            <div class="book-pages">
+              <div class="book-page left-page" id="book-page-left">
+                <!-- Filled dynamically -->
+              </div>
+              <div class="book-page right-page" id="book-page-right">
+                <!-- Filled dynamically -->
+              </div>
+            </div>
+
+            <button id="next-page-btn" class="page-nav-btn">&rarr;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Red Book Modal -->
+      <div id="puzzle-red-book" class="puzzle-modal hidden">
+        <div class="book-card red-book-card">
+          <button class="close-puzzle-btn">&times;</button>
+          <div class="book-workspace">
+            <div class="book-pages">
+              <div class="book-page left-page" style="justify-content: center;">
+                <div class="static-screen red-static"></div>
+              </div>
+              <div class="book-page right-page" style="text-align: left;">
+                <h3 style="color: #6b1d1d; font-family: 'Cinzel', serif; margin-bottom: 10px;">The Red Book</h3>
+                <p style="font-family: 'Cinzel', serif; font-weight: bold; color: var(--gold); margin-top: 10px; margin-bottom: 5px; font-size: 0.85rem;">SIRRUS:</p>
+                <p style="font-style: italic; line-height: 1.5; color: #482f1b; font-size: 0.88rem; margin-bottom: 12px;">"Please... you must help me. I am Sirrus, son of Atrus. My brother Achenar has gone mad and imprisoned me inside this linking book."</p>
+                <p style="font-style: italic; line-height: 1.5; color: #482f1b; font-size: 0.88rem; margin-bottom: 12px;">"Search the island. Solve the puzzles to find my lost red pages. But beware... do not trust Achenar. Do not touch his blue book!"</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Blue Book Modal -->
+      <div id="puzzle-blue-book" class="puzzle-modal hidden">
+        <div class="book-card blue-book-card">
+          <button class="close-puzzle-btn">&times;</button>
+          <div class="book-workspace">
+            <div class="book-pages">
+              <div class="book-page left-page" style="justify-content: center;">
+                <div class="static-screen blue-static"></div>
+              </div>
+              <div class="book-page right-page" style="text-align: left;">
+                <h3 style="color: #1d3b6b; font-family: 'Cinzel', serif; margin-bottom: 10px;">The Blue Book</h3>
+                <p style="font-family: 'Cinzel', serif; font-weight: bold; color: var(--gold); margin-top: 10px; margin-bottom: 5px; font-size: 0.85rem;">ACHENAR:</p>
+                <p style="font-style: italic; line-height: 1.5; color: #482f1b; font-size: 0.88rem; margin-bottom: 12px;">"Greetings, traveler. I am Achenar. Do not be deceived by my brother Sirrus's sweet words. It was he who burned our father's library and trapped me here."</p>
+                <p style="font-style: italic; line-height: 1.5; color: #482f1b; font-size: 0.88rem; margin-bottom: 12px;">"I need the blue pages to restore my book and regain my freedom. Find them! Do not listen to Sirrus... he lies, and his red book is dangerous."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Login/Lobby Setup Overlay -->
+  <div id="login-overlay" class="overlay">
+    <div class="glass-panel login-card">
+      <h1 class="mystic-title">mPyst</h1>
+      <p class="tagline">Collaborate with your classmates to unlock the secrets of the island.</p>
+      
+      <!-- Onboarding Clue Help notice -->
+      <div style="background: rgba(212, 175, 55, 0.08); border: 1px solid var(--gold); border-radius: 6px; padding: 12px; margin-bottom: 20px; font-size: 0.85rem; line-height: 1.4; color: var(--text-secondary); text-align: left;">
+        <span style="color: var(--gold); font-weight: 600; display: block; margin-bottom: 4px; font-family: 'Cinzel', serif; font-size: 0.9rem;">📚 WHERE ARE THE CLUES?</span>
+        To solve the puzzles, you must locate the <strong>Library</strong> (walk up the stone steps from the Docks walkway). Once inside, inspect the <strong>Bookshelf</strong> or the <strong>Red & Blue book podiums</strong> to read the journals containing all combinations, notes, and formulas!
+      </div>
+      
+      <div class="form-group">
+        <label for="player-name">Your Explorer Name</label>
+        <input type="text" id="player-name" maxlength="15" placeholder="Enter name..." autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label>Select Avatar Color</label>
+        <div class="color-picker-grid">
+          <button type="button" class="color-btn selected" style="--btn-color: #ffd700;" data-color="#ffd700"></button>
+          <button type="button" class="color-btn" style="--btn-color: #3bc43b;" data-color="#3bc43b"></button>
+          <button type="button" class="color-btn" style="--btn-color: #3b82f6;" data-color="#3b82f6"></button>
+          <button type="button" class="color-btn" style="--btn-color: #ec4899;" data-color="#ec4899"></button>
+          <button type="button" class="color-btn" style="--btn-color: #a855f7;" data-color="#a855f7"></button>
+          <button type="button" class="color-btn" style="--btn-color: #f97316;" data-color="#f97316"></button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Game Sync Mode</label>
+        <div class="mode-selector">
+          <label class="mode-option">
+            <input type="radio" name="game-mode" value="coop" checked>
+            <div class="mode-card">
+              <h3>Cooperative</h3>
+              <p>Share all puzzle states. Solving a puzzle unlocks it for the whole class.</p>
+            </div>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="game-mode" value="solo">
+            <div class="mode-card">
+              <h3>Solo Explorer</h3>
+              <p>See and chat with others, but solve the puzzles individually at your own pace.</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <button id="join-btn" class="mystic-btn">Enter Island</button>
+    </div>
+  </div>
+
+  <!-- Main Game HUD (HUD HUD) -->
+  <div id="game-hud" class="hidden">
+    <!-- Top Bar: Title & Online List -->
+    <div class="hud-top">
+      <div class="glass-panel panel-brand">
+        <h2>mPyst</h2>
+        <span id="player-mode-badge" class="badge">Co-op Mode</span>
+      </div>
+      <div class="glass-panel panel-players">
+        <h3>Active Explorers (<span id="player-count">1</span>)</h3>
+        <div id="players-list" class="players-row">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Left Bar: Puzzle Tracker -->
+    <div class="hud-left">
+      <div class="glass-panel panel-tasks">
+        <h3>Island Progress</h3>
+        <ul class="task-list">
+          <li id="task-bridge" class="task-item">
+            <span class="status-box"></span>
+            Raise Clock Tower Bridge
+          </li>
+          <li id="task-gears" class="task-item">
+            <span class="status-box"></span>
+            Solve Clock Tower Gears
+          </li>
+          <li id="task-generator" class="task-item">
+            <span class="status-box"></span>
+            Power the Spaceship (59V)
+          </li>
+          <li id="task-piano" class="task-item">
+            <span class="status-box"></span>
+            Spaceship Audio Code
+          </li>
+          <li id="task-fireplace" class="task-item">
+            <span class="status-box"></span>
+            Library Fireplace Pattern
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Right Bar: Chat System -->
+    <div class="hud-right">
+      <div class="glass-panel panel-chat">
+        <h3>Island Chat</h3>
+        <div id="chat-messages" class="chat-content">
+          <!-- Filled dynamically -->
+        </div>
+        <form id="chat-form" class="chat-input-row">
+          <input type="text" id="chat-input" placeholder="Type message..." autocomplete="off" maxlength="100">
+          <button type="submit" class="chat-send-btn">Send</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Bottom Instructions Overlay -->
+    <div class="hud-bottom" style="display: flex; justify-content: space-between; align-items: center; padding: 0 24px;">
+      <p class="hud-tip" style="margin: 0;">Click edge arrows to navigate. Click screen objects to inspect. <strong>Clues:</strong> Read journals in the Library (up the steps).</p>
+      <label class="hud-toggle" style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 0.8rem; cursor: pointer; user-select: none;">
+        <input type="checkbox" id="toggle-nav-indicators" style="accent-color: var(--gold); cursor: pointer;">
+        <span>Show Path Overlays</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Final Victory Overlay -->
+  <div id="victory-overlay" class="overlay hidden">
+    <div class="glass-panel victory-card">
+      <h1 class="victory-title">The Myst Book Unlocked!</h1>
+      <p class="victory-tagline">You have successfully coordinated to solve the puzzles of mPyst.</p>
+      <div class="victory-book-wrapper">
+        <div class="victory-myst-book" id="victory-book-link">
+          <div class="book-cover-art"></div>
+          <span>TOUCH BOOK</span>
+        </div>
+      </div>
+      <p class="victory-msg">All secrets are revealed. Excellent teamwork, Explorers!</p>
+      <button id="reset-game-btn" class="mystic-btn">Restart Journey</button>
+    </div>
+  </div>
+
+  <!-- Entry Script -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

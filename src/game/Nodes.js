@@ -1,0 +1,271 @@
+// Node-based navigation graph representing the Myst Island slideshow scenes
+export const NODES = {
+  'docks': {
+    id: 'docks',
+    title: 'The Docks',
+    image: '/assets/myst_docks.png',
+    links: [
+      { type: 'forward', target: 'docks_path' },
+      { type: 'right', target: 'docks_valve_zoom' }
+    ],
+    hotspots: [
+      {
+        x: 5, y: 45, w: 26, h: 45, // Valve pillar on left
+        action: 'navigate',
+        target: 'docks_valve_zoom',
+        tooltip: 'Examine Clock Valve Pillar'
+      },
+      {
+        x: 35, y: 35, w: 40, h: 45, // Wooden walkway path heading forward
+        action: 'navigate',
+        target: 'docks_path',
+        tooltip: 'Walk Forward'
+      }
+    ]
+  },
+  'docks_valve_zoom': {
+    id: 'docks_valve_zoom',
+    title: 'Clock Valve Pillar',
+    image: '/assets/myst_docks.png',
+    links: [
+      { type: 'back', target: 'docks' }
+    ]
+  },
+  'docks_path': {
+    id: 'docks_path',
+    title: 'Docks Path',
+    getImage: (state) => state.bridgeRaised ? '/assets/myst_clock_bridge.png' : '/assets/myst_clock_water.png',
+    links: [
+      { type: 'back', target: 'docks' },
+      { type: 'left', target: 'library_path' },
+      { 
+        type: 'forward', 
+        target: 'clock_tower_exterior',
+        condition: (state) => state.bridgeRaised,
+        lockedMessage: 'The clock tower lies across deep water. The bridge must be raised.'
+      }
+    ],
+    hotspots: [
+      {
+        x: 30, y: 5, w: 45, h: 60, // Clock Tower in the distance
+        action: 'navigate',
+        target: 'clock_tower_exterior',
+        condition: (state) => state.bridgeRaised,
+        lockedMessage: 'The clock tower lies across deep water. The bridge must be raised.',
+        tooltip: 'Cross Bridge to Clock Tower'
+      },
+      {
+        x: 0, y: 20, w: 20, h: 60, // Left rock pathway
+        action: 'navigate',
+        target: 'library_path',
+        tooltip: 'Go to Library steps'
+      }
+    ]
+  },
+  'clock_tower_exterior': {
+    id: 'clock_tower_exterior',
+    title: 'Clock Tower Entrance',
+    image: '/assets/myst_clock_bridge.png',
+    links: [
+      { type: 'forward', target: 'clock_tower_interior' },
+      { type: 'back', target: 'docks_path' }
+    ],
+    hotspots: [
+      {
+        x: 54, y: 46, w: 4, h: 8, // Clock tower door
+        action: 'navigate',
+        target: 'clock_tower_interior',
+        tooltip: 'Enter Clock Tower'
+      }
+    ]
+  },
+  'clock_tower_interior': {
+    id: 'clock_tower_interior',
+    title: 'Clock Tower Gearbox',
+    image: '/assets/myst_clock_interior.png',
+    links: [
+      { type: 'back', target: 'clock_tower_exterior' }
+    ]
+  },
+  'library_path': {
+    id: 'library_path',
+    title: 'Steps to the Library',
+    image: '/assets/myst_library_steps.png',
+    links: [
+      { type: 'forward', target: 'library_exterior' },
+      { type: 'back', target: 'docks_path' }
+    ],
+    hotspots: [
+      {
+        x: 30, y: 4, w: 40, h: 40, // Library dome at top of steps
+        action: 'navigate',
+        target: 'library_exterior',
+        tooltip: 'Walk up steps to Library'
+      }
+    ]
+  },
+  'library_exterior': {
+    id: 'library_exterior',
+    title: 'Library Entrance',
+    image: '/assets/myst_library_steps.png', // reuse library path steps image for exterior zoom
+    links: [
+      { type: 'forward', target: 'library_interior' },
+      { type: 'back', target: 'library_path' },
+      { type: 'left', target: 'cabin_path' },
+      { type: 'right', target: 'spaceship_path' }
+    ],
+    hotspots: [
+      {
+        x: 53, y: 24, w: 6, h: 10, // Library doorway
+        action: 'navigate',
+        target: 'library_interior',
+        tooltip: 'Enter Library'
+      },
+      {
+        x: 0, y: 35, w: 30, h: 55, // Left path to generator cabin
+        action: 'navigate',
+        target: 'cabin_path',
+        tooltip: 'Path to Generator Cabin'
+      },
+      {
+        x: 75, y: 35, w: 25, h: 55, // Right path to spaceship pad
+        action: 'navigate',
+        target: 'spaceship_path',
+        tooltip: 'Path to Spaceship Landing Pad'
+      }
+    ]
+  },
+  'library_interior': {
+    id: 'library_interior',
+    title: 'The Library',
+    image: '/assets/myst_library_interior.png',
+    links: [
+      { type: 'back', target: 'library_exterior' }
+    ],
+    hotspots: [
+      {
+        x: 68, y: 22, w: 23, h: 56, // Bookshelf
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-book',
+        tooltip: 'Inspect Bookshelf'
+      },
+      {
+        x: 19, y: 58, w: 22, h: 35, // Red book podium
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-red-book',
+        tooltip: 'Inspect Red Book'
+      },
+      {
+        x: 54, y: 58, w: 18, h: 28, // Blue book podium
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-blue-book',
+        tooltip: 'Inspect Blue Book'
+      },
+      {
+        x: 45, y: 48, w: 10, h: 22, // Stone fireplace
+        action: 'navigate',
+        target: 'fireplace_node',
+        tooltip: 'Inspect Fireplace'
+      }
+    ]
+  },
+  'fireplace_node': {
+    id: 'fireplace_node',
+    title: 'Library Fireplace',
+    getImage: (state) => state.mystBookRevealed ? '/assets/myst_fireplace_open.png' : '/assets/myst_fireplace.png',
+    links: [
+      { type: 'back', target: 'library_interior' }
+    ]
+  },
+  'cabin_path': {
+    id: 'cabin_path',
+    title: 'Forest Path to Cabin',
+    image: '/assets/myst_cabin_path.png',
+    links: [
+      { type: 'forward', target: 'cabin_exterior' },
+      { type: 'back', target: 'library_exterior' }
+    ],
+    hotspots: [
+      {
+        x: 10, y: 35, w: 38, h: 42, // Generator cabin on path
+        action: 'navigate',
+        target: 'cabin_exterior',
+        tooltip: 'Walk to Cabin'
+      }
+    ]
+  },
+  'cabin_exterior': {
+    id: 'cabin_exterior',
+    title: 'Generator Cabin Entrance',
+    image: '/assets/myst_cabin_exterior.png',
+    links: [
+      { type: 'forward', target: 'cabin_interior' },
+      { type: 'back', target: 'cabin_path' }
+    ],
+    hotspots: [
+      {
+        x: 16, y: 48, w: 10, h: 24, // Cabin door
+        action: 'navigate',
+        target: 'cabin_interior',
+        tooltip: 'Enter Cabin'
+      }
+    ]
+  },
+  'cabin_interior': {
+    id: 'cabin_interior',
+    title: 'Generator Switchboard',
+    image: '/assets/myst_cabin_interior.png',
+    links: [
+      { type: 'back', target: 'cabin_exterior' }
+    ]
+  },
+  'spaceship_path': {
+    id: 'spaceship_path',
+    title: 'Path to Landing Pad',
+    image: '/assets/myst_spaceship_path.png',
+    links: [
+      { type: 'forward', target: 'spaceship_exterior' },
+      { type: 'back', target: 'library_exterior' }
+    ],
+    hotspots: [
+      {
+        x: 28, y: 40, w: 45, h: 25, // Spaceship in the distance
+        action: 'navigate',
+        target: 'spaceship_exterior',
+        tooltip: 'Walk to Spaceship'
+      }
+    ]
+  },
+  'spaceship_exterior': {
+    id: 'spaceship_exterior',
+    title: 'Spaceship Landing Pad',
+    image: '/assets/myst_spaceship_exterior.png',
+    links: [
+      { type: 'back', target: 'spaceship_path' },
+      {
+        type: 'forward',
+        target: 'spaceship_interior',
+        condition: (state) => state.generatorSolved,
+        lockedMessage: 'The spaceship door is locked tight. It needs power to activate the controls.'
+      }
+    ],
+    hotspots: [
+      {
+        x: 37, y: 42, w: 16, h: 8, // Spaceship glass window door
+        action: 'navigate',
+        target: 'spaceship_interior',
+        condition: (state) => state.generatorSolved,
+        lockedMessage: 'The spaceship door is locked tight. It needs power to activate the controls.',
+        tooltip: 'Enter Spaceship'
+      }
+    ]
+  },
+  'spaceship_interior': {
+    id: 'spaceship_interior',
+    title: 'Spaceship Console',
+    image: '/assets/myst_spaceship_interior.png',
+    links: [
+      { type: 'back', target: 'spaceship_exterior' }
+    ]
+  }
+};
