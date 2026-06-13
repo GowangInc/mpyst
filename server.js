@@ -33,7 +33,7 @@ const __dirname = path.dirname(__filename);
 
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
-const ADMIN_PASSWORD = process.env.MPYST_ADMIN_PASSWORD || 'mpyst-admin';
+const ADMIN_PASSWORD = process.env.MPYST_ADMIN_PASSWORD || 'admin';
 const ADMIN_TOKEN = hashPassword(ADMIN_PASSWORD);
 
 initDatabase();

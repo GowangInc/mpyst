@@ -81,7 +81,7 @@ PORT=8080 NODE_ENV=production npm start
 
 ### 5. Admin password
 
-Set the admin password with an environment variable (default is `mpyst-admin`):
+Set the admin password with an environment variable (default is `admin`):
 
 ```bash
 MPYST_ADMIN_PASSWORD=your-secure-password npm start
