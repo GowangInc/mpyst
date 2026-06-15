@@ -43,7 +43,7 @@ const BOOK_PAGES = [
   },
   {
     left: "<h3>The Forest Shrine</h3><p>Beyond the Clock Tower, a hidden trail leads to an ancient shrine where water must be routed to a stone wheel. The aqueduct tiles rotate to direct the flow.</p><p>From the spring in the upper-left, the water must wind down to the wheel in the lower-right.</p>",
-    right: "<h3>Shrine Pipe Code</h3><p>The target tile pattern from left to right, top to bottom is:</p><p><strong>2 1 1 2</strong><br><strong>0 0 0 0</strong><br><strong>0 0 0 0</strong><br><strong>2 1 1 0</strong></p><p>Click each stone tile until it matches this layout, then test the flow.</p>"
+    right: "<h3>Shrine Pipe Code</h3><p>The target tile pattern from left to right, top to bottom is:</p><p><strong>2 1 1 3</strong><br><strong>2 1 1 2</strong><br><strong>2 1 1 3</strong><br><strong>0 0 0 0</strong></p><p>Click each stone tile until it matches this layout, then test the flow.</p>"
   },
   {
     left: "<h3>The Crystal Cavern</h3><p>Through the tunnel behind the shrine lies a cavern of light-bending crystals. An emitter crystal casts a beam that must reach the receiver.</p><p>The mirrors rotate to redirect the beam. Each mirror can face one of four diagonal angles.</p>",
@@ -419,10 +419,10 @@ export class PuzzleManager {
     const shrineGrid = document.getElementById('shrine-pipe-grid');
     if (shrineGrid) {
       const shrineSolution = [
+        2, 1, 1, 3,
         2, 1, 1, 2,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        2, 1, 1, 0
+        2, 1, 1, 3,
+        0, 0, 0, 0
       ];
       // Connections: bit mask for [top, right, bottom, left]
       const pipeConnections = [
@@ -956,15 +956,17 @@ export class PuzzleManager {
   }
 
   // SVG helpers for new puzzles
-  renderPipeTile(rotation) {
+  renderPipeTile(type) {
+    // Each value is a fixed pipe shape (no extra rotation).
+    // 0 vertical, 1 horizontal, 2 L-bend (top-right), 3 T-junction (top-left-bottom)
     const paths = [
-      'M40 0 V80',               // 0 vertical
-      'M0 40 H80',               // 1 horizontal
-      'M40 0 V40 H80',           // 2 L bend (top-left)
-      'M40 0 V80 M0 40 H40'      // 3 T junction
+      'M40 0 V80',
+      'M0 40 H80',
+      'M40 0 V40 H80',
+      'M40 0 V80 M0 40 H40'
     ];
-    const d = paths[rotation];
-    return `<div class="pipe-graphic" style="transform: rotate(${rotation * 90}deg); width:100%; height:100%;">
+    const d = paths[type];
+    return `<div class="pipe-graphic" style="width:100%; height:100%;">
       <svg viewBox="0 0 80 80">
         <path d="${d}" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/>
         <path class="water-path" d="${d}" stroke="#4fc3f7" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="18 24" stroke-dashoffset="0"/>
@@ -1007,9 +1009,22 @@ export class PuzzleManager {
     const path = [];
     const dirs = [[-1,0],[0,1],[1,0],[0,-1]]; // top, right, bottom, left
 
+    const tileConns = (idx) => {
+      const base = connections[rotations[idx]];
+      const r = rotations[idx];
+      // Tile SVG is rotated r * 90deg clockwise.
+      // New direction d corresponds to base direction (d - r + 4) % 4.
+      return [
+        base[(0 - r + 4) % 4], // top
+        base[(1 - r + 4) % 4], // right
+        base[(2 - r + 4) % 4], // bottom
+        base[(3 - r + 4) % 4]  // left
+      ];
+    };
+
     const canFlow = (from, to, dir) => {
-      const fromConns = connections[rotations[from]];
-      const toConns = connections[rotations[to]];
+      const fromConns = tileConns(from);
+      const toConns = tileConns(to);
       const opposite = (dir + 2) % 4;
       return fromConns[dir] && toConns[opposite];
     };
