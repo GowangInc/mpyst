@@ -28,6 +28,10 @@ const BOOK_PAGES = [
   {
     left: "<h3>The Spaceship Piano</h3><p>The frequency locks on the ship are sound-based. Ensure the generator cabin routes power first.</p><p>Replicate the 5-note speaker chime using the sliders. The target melody sequence is: <strong>D - F - A - G - C5</strong>.</p><p>Set the pitches on the console sliders to match this melody to reveal the medallion.</p>",
     right: "<h3>The Library Fireplace</h3><p>A secret passage is hidden behind the stone wall of the library fireplace. The fireplace backplate moves once the gear system is active.</p><p>On the back wall panel, click the metal plates to toggle the 3x3 grid. The passcode pattern represents a <strong>hollow metal frame</strong> (hollow square).</p>"
+  },
+  {
+    left: "<h3>The Island Markers</h3><p>Scattered across the island are five marker switches left by the D'ni surveyors. When all are raised, they channel power to the Library Imager.</p><p>Search near the Docks, the Docks Path, the Library Entrance, the Cabin Path, and the Spaceship Path.</p>",
+    right: "<h3>The Library Imager</h3><p>The Imager projects a recorded message when fed the correct date. Atrus left this clue in his journal:</p><p><strong>October 11, 1984</strong> — the day he first linked to Myst.</p><p>Enter the date as <strong>10.11.1984</strong> to see the message.</p>"
   }
 ];
 
@@ -480,6 +484,29 @@ export class PuzzleManager {
 
     this.updateCavernBeams();
 
+    // 5c. LIBRARY IMAGER
+    const imagerInput = document.getElementById('imager-input');
+    const imagerSubmit = document.getElementById('imager-submit-btn');
+    if (imagerSubmit) {
+      imagerSubmit.addEventListener('click', () => {
+        if (!this.state.markerSwitchesRaised) {
+          audio.playBuzzer();
+          this.showFeedback('The Imager is dark. The marker switches must be raised first.');
+          return;
+        }
+        const value = imagerInput.value.trim();
+        this.updateStateLocal({ imagerInput: value });
+        if (value === '10.11.1984') {
+          this.updateStateLocal({ imagerSolved: true });
+          audio.playSuccess();
+          this.showFeedback('The Imager flickers and projects a message: "The dome above the Library holds the Serpent constellation."');
+        } else {
+          audio.playBuzzer();
+          this.showFeedback('Static crackles. The Imager does not recognize that date.');
+        }
+      });
+    }
+
     document.getElementById('fireplace-enter-btn').addEventListener('click', () => {
       audio.playClick();
       // Solve check: Hollow square pattern (all active except center index 4)
@@ -536,6 +563,11 @@ export class PuzzleManager {
     // Marker switch modal uses the same modal with dynamic ID
     if (puzzleId === 'puzzle-marker-switch') {
       this.openMarkerSwitch(data.switchId);
+      return;
+    }
+
+    if (puzzleId === 'puzzle-imager' && !this.state.markerSwitchesRaised) {
+      this.showFeedback('The Imager is dark and silent. Raise all marker switches to power it.');
       return;
     }
 
@@ -664,7 +696,27 @@ export class PuzzleManager {
     updateTask('task-piano', this.state.spaceshipSolved);
     updateTask('task-shrine', this.state.shrineSolved);
     updateTask('task-cavern', this.state.cavernSolved);
+    updateTask('task-imager', this.state.imagerSolved);
     updateTask('task-fireplace', this.state.mystBookRevealed);
+
+    // 7. Library Imager UI
+    const imagerMessage = document.getElementById('imager-message');
+    const imagerScreen = document.getElementById('imager-screen');
+    if (imagerMessage && imagerScreen) {
+      if (!this.state.markerSwitchesRaised) {
+        imagerScreen.classList.remove('active');
+        imagerMessage.classList.remove('visible', 'active');
+        imagerMessage.textContent = '';
+      } else if (this.state.imagerSolved) {
+        imagerMessage.textContent = 'The Serpent constellation in the Library Dome reveals the Cabin Safe code: 4 - 7 - 2';
+        imagerMessage.classList.add('active');
+        imagerScreen.classList.add('active');
+      } else {
+        imagerScreen.classList.add('active');
+        imagerMessage.textContent = 'Static...';
+        imagerMessage.classList.add('visible');
+      }
+    }
 
     // If final book is revealed, play victory chime once
     if (this.state.mystBookRevealed && !this.victoryShown) {

@@ -197,6 +197,12 @@ export const NODES = {
         tooltip: 'Inspect Blue Book'
       },
       {
+        x: 38, y: 28, w: 14, h: 18, // Wall imager
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-imager',
+        tooltip: 'Inspect Imager'
+      },
+      {
         x: 45, y: 48, w: 10, h: 22, // Stone fireplace
         action: 'navigate',
         target: 'fireplace_node',

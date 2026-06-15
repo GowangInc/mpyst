@@ -289,6 +289,23 @@
     </div>
   </div>
 
+  <!-- Puzzle: Library Imager -->
+  <div id="puzzle-imager" class="puzzle-modal hidden">
+    <div class="book-card imager-card">
+      <button class="close-puzzle-btn">&times;</button>
+      <div class="puzzle-title">Library Imager</div>
+      <div id="imager-screen" class="imager-screen">
+        <div id="imager-static" class="imager-static"></div>
+        <div id="imager-message" class="imager-message"></div>
+      </div>
+      <div class="imager-controls">
+        <label for="imager-input">Enter Date Code</label>
+        <input type="text" id="imager-input" maxlength="10" placeholder="MM.DD.YYYY" autocomplete="off">
+        <button id="imager-submit-btn" class="mystic-btn" style="width:auto; margin-top:12px;">Project Image</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Main Game HUD (HUD HUD) -->
   <div id="game-hud" class="hidden">
     <!-- Top Bar: Title & Online List -->
@@ -333,6 +350,10 @@
           <li id="task-cavern" class="task-item">
             <span class="status-box"></span>
             Ignite Crystal Receiver
+          </li>
+          <li id="task-imager" class="task-item">
+            <span class="status-box"></span>
+            Library Imager Message
           </li>
           <li id="task-fireplace" class="task-item">
             <span class="status-box"></span>
