@@ -32,6 +32,10 @@ const BOOK_PAGES = [
   {
     left: "<h3>The Island Markers</h3><p>Scattered across the island are five marker switches left by the D'ni surveyors. When all are raised, they channel power to the Library Imager.</p><p>Search near the Docks, the Docks Path, the Library Entrance, the Cabin Path, and the Spaceship Path.</p>",
     right: "<h3>The Library Imager</h3><p>The Imager projects a recorded message when fed the correct date. Atrus left this clue in his journal:</p><p><strong>October 11, 1984</strong> — the day he first linked to Myst.</p><p>Enter the date as <strong>10.11.1984</strong> to see the message.</p>"
+  },
+  {
+    left: "<h3>The Library Dome</h3><p>Above the Library rests a glass dome that opens to the night sky. Inside is an orrery and star chart left by Atrus.</p><p>Once the elevator is powered, ascend to the dome and trace the constellation of the Serpent across the chart.</p>",
+    right: "<h3>The Serpent Constellation</h3><p>The Serpent winds across the sky in seven bright stars. Begin at its head in the upper left and follow its body down, then right, then down again.</p><p>Trace the stars in order to reveal the three-number Cabin Safe code: <strong>4 - 7 - 2</strong>.</p>"
   }
 ];
 
@@ -507,6 +511,59 @@ export class PuzzleManager {
       });
     }
 
+    // 5d. STAR CHART
+    const starGrid = document.getElementById('star-chart-grid');
+    if (starGrid) {
+      const starSolution = [1, 7, 13, 14, 20, 26, 27];
+      this.starOrder = [];
+      starGrid.innerHTML = '';
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'star-lines');
+      svg.setAttribute('viewBox', '0 0 384 384');
+      starGrid.appendChild(svg);
+      for (let i = 0; i < 36; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'star-cell';
+        cell.dataset.idx = i;
+        if (starSolution.includes(i)) {
+          cell.classList.add('part-of-constellation');
+        }
+        cell.addEventListener('click', () => {
+          if (this.state.starChartSolved) return;
+          if (!this.state.imagerSolved) {
+            this.showFeedback('The chart is unresponsive. The Imager must reveal the target constellation first.');
+            return;
+          }
+          const expected = starSolution[this.starOrder.length];
+          if (i === expected) {
+            audio.playClick();
+            this.starOrder.push(i);
+            cell.classList.add('active');
+            this.drawStarLines(starSolution, this.starOrder);
+            if (this.starOrder.length === starSolution.length) {
+              this.updateStateLocal({ starChartSolved: true });
+              audio.playSuccess();
+              this.showFeedback('The stars align! The Serpent constellation glows and reveals the Cabin Safe code: 4 - 7 - 2');
+            }
+          } else {
+            audio.playBuzzer();
+            this.starOrder = [];
+            starGrid.querySelectorAll('.star-cell').forEach(c => c.classList.remove('active'));
+            svg.innerHTML = '';
+            this.showFeedback('The constellation breaks apart. Start again from the Serpent\'s head.');
+          }
+        });
+        starGrid.appendChild(cell);
+      }
+      document.getElementById('star-chart-submit-btn').addEventListener('click', () => {
+        if (this.state.starChartSolved) {
+          this.showFeedback('The constellation is already traced. The code is 4 - 7 - 2.');
+        } else {
+          this.showFeedback('Click the stars in the correct order to trace the Serpent.');
+        }
+      });
+    }
+
     document.getElementById('fireplace-enter-btn').addEventListener('click', () => {
       audio.playClick();
       // Solve check: Hollow square pattern (all active except center index 4)
@@ -697,7 +754,13 @@ export class PuzzleManager {
     updateTask('task-shrine', this.state.shrineSolved);
     updateTask('task-cavern', this.state.cavernSolved);
     updateTask('task-imager', this.state.imagerSolved);
+    updateTask('task-star-chart', this.state.starChartSolved);
     updateTask('task-fireplace', this.state.mystBookRevealed);
+
+    // 8. Star Chart solved UI
+    if (this.state.starChartSolved) {
+      document.querySelectorAll('.star-cell').forEach(c => c.classList.add('active'));
+    }
 
     // 7. Library Imager UI
     const imagerMessage = document.getElementById('imager-message');
@@ -759,6 +822,26 @@ export class PuzzleManager {
     // slash or backslash mirror line
     const d = rotation % 2 === 0 ? 'M10 60 L60 10' : 'M10 10 L60 60';
     return `<svg viewBox="0 0 70 70"><path d="${d}" stroke="#a5b4fc" stroke-width="6" stroke-linecap="round"/><circle cx="35" cy="35" r="4" fill="#a5b4fc"/></svg>`;
+  }
+
+  drawStarLines(solution, order) {
+    const svg = document.querySelector('#star-chart-grid svg');
+    if (!svg || order.length < 2) return;
+    svg.innerHTML = '';
+    for (let i = 0; i < order.length - 1; i++) {
+      const from = order[i];
+      const to = order[i + 1];
+      const x1 = (from % 6) * 68 + 34;
+      const y1 = Math.floor(from / 6) * 68 + 34;
+      const x2 = (to % 6) * 68 + 34;
+      const y2 = Math.floor(to / 6) * 68 + 34;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      svg.appendChild(line);
+    }
   }
 
   updateCavernBeams() {

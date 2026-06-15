@@ -140,7 +140,13 @@ export const NODES = {
       { type: 'forward', target: 'library_interior' },
       { type: 'back', target: 'library_path' },
       { type: 'left', target: 'cabin_path' },
-      { type: 'right', target: 'spaceship_path' }
+      { type: 'right', target: 'spaceship_path' },
+      {
+        type: 'forward',
+        target: 'library_dome',
+        condition: (state) => state.elevatorPowered,
+        lockedMessage: 'The dome elevator is locked. The clock tower gears must power it first.'
+      }
     ],
     hotspots: [
       {
@@ -157,6 +163,14 @@ export const NODES = {
         tooltip: 'Marker Switch'
       },
       {
+        x: 30, y: 0, w: 40, h: 20,
+        action: 'navigate',
+        target: 'library_dome',
+        condition: (state) => state.elevatorPowered,
+        lockedMessage: 'The dome elevator is locked. The clock tower gears must power it first.',
+        tooltip: 'Ascend to Library Dome'
+      },
+      {
         x: 0, y: 35, w: 30, h: 55, // Left path to generator cabin
         action: 'navigate',
         target: 'cabin_path',
@@ -167,6 +181,22 @@ export const NODES = {
         action: 'navigate',
         target: 'spaceship_path',
         tooltip: 'Path to Spaceship Landing Pad'
+      }
+    ]
+  },
+  'library_dome': {
+    id: 'library_dome',
+    title: 'Library Dome Observatory',
+    image: '/assets/myst_library_dome.png',
+    links: [
+      { type: 'back', target: 'library_exterior' }
+    ],
+    hotspots: [
+      {
+        x: 20, y: 10, w: 60, h: 80,
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-star-chart',
+        tooltip: 'Inspect Star Chart'
       }
     ]
   },

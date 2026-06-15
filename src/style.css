@@ -1725,6 +1725,77 @@ h1, h2, h3, .mystic-title {
   text-align: center;
 }
 
+.star-chart-card {
+  background: #0a0a1a !important;
+  border-color: #3b3b6b !important;
+  width: 520px;
+  height: auto;
+  display: block;
+  padding: 24px;
+}
+
+.star-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 60px);
+  grid-template-rows: repeat(6, 60px);
+  gap: 8px;
+  justify-content: center;
+  margin: 20px auto;
+  position: relative;
+}
+
+.star-cell {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star-cell::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.star-cell:hover::after {
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+.star-cell.active::after {
+  width: 14px;
+  height: 14px;
+  background: #ffe066;
+  box-shadow: 0 0 12px #ffe066;
+}
+
+.star-cell.part-of-constellation::after {
+  background: #a5b4fc;
+}
+
+.star-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.star-lines line {
+  stroke: #ffe066;
+  stroke-width: 2;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px #ffe066);
+}
+
 .pipe-grid {
   display: grid;
   grid-template-columns: repeat(4, 80px);
