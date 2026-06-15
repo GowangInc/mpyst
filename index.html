@@ -267,6 +267,28 @@
     </div>
   </div>
 
+  <!-- Puzzle: Forest Shrine Aqueduct -->
+  <div id="puzzle-forest-shrine" class="puzzle-modal hidden">
+    <div class="book-card forest-shrine-card">
+      <button class="close-puzzle-btn">&times;</button>
+      <div class="puzzle-title">Forest Shrine Aqueduct</div>
+      <p class="puzzle-instructions">Rotate each stone pipe tile until water flows from the spring (top-left) to the water wheel (bottom-right).</p>
+      <div id="shrine-pipe-grid" class="pipe-grid"></div>
+      <button id="shrine-flow-btn" class="mystic-btn" style="width:auto; margin-top:12px;">Test Flow</button>
+    </div>
+  </div>
+
+  <!-- Puzzle: Crystal Cavern Mirrors -->
+  <div id="puzzle-crystal-cavern" class="puzzle-modal hidden">
+    <div class="book-card crystal-cavern-card">
+      <button class="close-puzzle-btn">&times;</button>
+      <div class="puzzle-title">Crystal Cavern</div>
+      <p class="puzzle-instructions">Rotate the mirrors to bounce the light beam from the emitter to the receiver crystal.</p>
+      <div id="cavern-light-grid" class="light-grid"></div>
+      <button id="cavern-ignite-btn" class="mystic-btn" style="width:auto; margin-top:12px;">Ignite Receiver</button>
+    </div>
+  </div>
+
   <!-- Main Game HUD (HUD HUD) -->
   <div id="game-hud" class="hidden">
     <!-- Top Bar: Title & Online List -->
@@ -303,6 +325,14 @@
           <li id="task-piano" class="task-item">
             <span class="status-box"></span>
             Spaceship Audio Code
+          </li>
+          <li id="task-shrine" class="task-item">
+            <span class="status-box"></span>
+            Restore Forest Aqueduct
+          </li>
+          <li id="task-cavern" class="task-item">
+            <span class="status-box"></span>
+            Ignite Crystal Receiver
           </li>
           <li id="task-fireplace" class="task-item">
             <span class="status-box"></span>

@@ -266,7 +266,7 @@ async function startServer() {
       }
 
       // Resolve effective mode: competition code mode overrides client mode
-      const effectiveMode = competition.mode === 'competition' ? 'competition' : (mode || 'coop');
+      const effectiveMode = competition?.mode || mode || 'coop';
 
       socket.join(`competition:${competition.id}`);
       active.sockets.add(socket.id);
@@ -352,7 +352,7 @@ async function startServer() {
 
       const competition = getCompetitionById(op.competitionId);
       const active = getOrCreateActiveCompetition(op.competitionId);
-      const effectiveMode = competition?.mode === 'competition' ? 'competition' : (op.mode || 'coop');
+      const effectiveMode = competition?.mode || op.mode || 'coop';
       op.mode = effectiveMode;
 
       if (effectiveMode === 'coop') {

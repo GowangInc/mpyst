@@ -48,6 +48,8 @@ export class PuzzleManager {
       generatorSolved: false,
       spaceshipSliders: [0, 0, 0, 0, 0],
       spaceshipSolved: false,
+      shrineSolved: false,
+      cavernSolved: false,
       mystBookRevealed: false
     };
 
@@ -83,43 +85,28 @@ export class PuzzleManager {
     const mValve = document.getElementById('minutes-valve');
     const clockSubmit = document.getElementById('clock-submit-btn');
 
-    let isValveDragging = false;
-    let startY = 0;
+    // Single shared valve drag state to avoid piling global mousemove listeners
+    let valveDrag = null;
+
+    const handleValveDelta = (type, dir) => {
+      audio.playGearGrind();
+      if (type === 'hours') {
+        let h = this.state.clockHours + dir;
+        if (h > 12) h = 1;
+        if (h < 1) h = 12;
+        this.updateStateLocal({ clockHours: h });
+      } else {
+        let m = this.state.clockMinutes + dir * 5;
+        if (m >= 60) m = 0;
+        if (m < 0) m = 55;
+        this.updateStateLocal({ clockMinutes: m });
+      }
+    };
 
     const setupValveDrag = (element, type) => {
       element.addEventListener('mousedown', (e) => {
-        isValveDragging = true;
-        startY = e.clientY;
+        valveDrag = { type, startY: e.clientY, element };
         element.style.cursor = 'grabbing';
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (!isValveDragging || !window.gameEngine || window.gameEngine.currentNodeId !== 'docks_valve_zoom') return;
-        const deltaY = e.clientY - startY;
-        if (Math.abs(deltaY) > 20) {
-          // Increment or decrement based on direction
-          const dir = deltaY > 0 ? -1 : 1;
-          audio.playGearGrind();
-          
-          if (type === 'hours') {
-            let h = this.state.clockHours + dir;
-            if (h > 12) h = 1;
-            if (h < 1) h = 12;
-            this.updateStateLocal({ clockHours: h });
-          } else {
-            let m = this.state.clockMinutes + dir * 5;
-            if (m >= 60) m = 0;
-            if (m < 0) m = 55;
-            this.updateStateLocal({ clockMinutes: m });
-          }
-          
-          startY = e.clientY;
-        }
-      });
-
-      window.addEventListener('mouseup', () => {
-        isValveDragging = false;
-        element.style.cursor = 'grab';
       });
 
       // Bind click event for direct tap interaction
@@ -139,6 +126,23 @@ export class PuzzleManager {
 
     setupValveDrag(hValve, 'hours');
     setupValveDrag(mValve, 'minutes');
+
+    window.addEventListener('mousemove', (e) => {
+      if (!valveDrag || !window.gameEngine || window.gameEngine.currentNodeId !== 'docks_valve_zoom') return;
+      const deltaY = e.clientY - valveDrag.startY;
+      if (Math.abs(deltaY) > 20) {
+        const dir = deltaY > 0 ? -1 : 1;
+        handleValveDelta(valveDrag.type, dir);
+        valveDrag.startY = e.clientY;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (valveDrag) {
+        valveDrag.element.style.cursor = 'grab';
+        valveDrag = null;
+      }
+    });
 
     clockSubmit.addEventListener('click', () => {
       audio.playClick();
@@ -341,6 +345,18 @@ export class PuzzleManager {
     fpGrid.innerHTML = '';
     // Store states of 9 panels locally
     this.fpPanels = Array(9).fill(false);
+
+    // Forest shrine pipe puzzle state (4x4 grid, 0-3 rotations)
+    this.shrinePipes = Array(16).fill(0);
+    // Crystal cavern mirror puzzle state (5x5 grid, -1=empty, 0-3 orientations for mirrors)
+    this.cavernMirrors = Array(25).fill(-1);
+    this.cavernBeams = Array(25).fill(false);
+
+    // Forest shrine pipe puzzle state (4x4 grid, 0-3 rotations)
+    this.shrinePipes = Array(16).fill(0);
+    // Crystal cavern mirror puzzle state (5x5 grid, -1=empty, 0-3 orientations for mirrors)
+    this.cavernMirrors = Array(25).fill(-1);
+    this.cavernBeams = Array(25).fill(false);
     for (let i = 0; i < 9; i++) {
       const plate = document.createElement('div');
       plate.className = 'fire-plate';
@@ -353,6 +369,115 @@ export class PuzzleManager {
         plate.classList.toggle('active', this.fpPanels[i]);
       });
     }
+
+    // 5a. FOREST SHRINE AQUEDUCT
+    const shrineGrid = document.getElementById('shrine-pipe-grid');
+    if (shrineGrid) {
+      const shrineSolution = [
+        2, 1, 1, 3,
+        2, 3, 2, 1,
+        1, 2, 1, 2,
+        3, 1, 2, 0
+      ];
+      shrineGrid.innerHTML = '';
+      for (let i = 0; i < 16; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'pipe-tile';
+        tile.dataset.idx = i;
+        tile.innerHTML = this.renderPipeTile(this.shrinePipes[i]);
+        tile.addEventListener('click', () => {
+          audio.playClick();
+          this.shrinePipes[i] = (this.shrinePipes[i] + 1) % 4;
+          tile.innerHTML = this.renderPipeTile(this.shrinePipes[i]);
+        });
+        shrineGrid.appendChild(tile);
+      }
+      document.getElementById('shrine-flow-btn').addEventListener('click', () => {
+        audio.playClick();
+        const solved = this.shrinePipes.every((v, i) => v === shrineSolution[i]);
+        if (solved) {
+          this.updateStateLocal({ shrineSolved: true });
+          audio.playSuccess();
+          this.showFeedback('Water rushes through the aqueduct! The stone door to the caverns grinds open.');
+          document.querySelectorAll('.pipe-tile').forEach(t => t.classList.add('active'));
+          setTimeout(() => {
+            if (window.gameEngine) window.gameEngine.navigateToNode('forest_shrine');
+            this.closeActivePuzzle();
+          }, 1500);
+        } else {
+          audio.playBuzzer();
+          this.showFeedback('The water spills out before reaching the wheel. Check the pipe angles.');
+        }
+      });
+    }
+
+    // 5b. CRYSTAL CAVERN MIRRORS
+    const cavernGrid = document.getElementById('cavern-light-grid');
+    if (cavernGrid) {
+      const cavernLayout = [
+        'E', 0, 0, 0, 0,
+        0, 'M', 0, 'M', 0,
+        0, 0, 'M', 0, 0,
+        0, 'M', 0, 'M', 0,
+        0, 0, 0, 0, 'R'
+      ];
+      const cavernSolution = [1, 2, 1, 2, 1]; // mirror orientations for the 5 mirrors
+      this.cavernMirrors = cavernLayout.map(c => c === 'M' ? 0 : -1);
+      cavernGrid.innerHTML = '';
+      let mirrorIndex = 0;
+      for (let i = 0; i < 25; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'light-cell';
+        cell.dataset.idx = i;
+        const type = cavernLayout[i];
+        if (type === 'E') {
+          cell.classList.add('emitter');
+          cell.innerHTML = '<span style="font-size:1.4rem">☀️</span>';
+        } else if (type === 'R') {
+          cell.classList.add('receiver');
+          cell.innerHTML = '<span style="font-size:1.4rem">💎</span>';
+        } else if (type === 'M') {
+          cell.classList.add('mirror');
+          const idx = mirrorIndex++;
+          cell.dataset.mirror = idx;
+          cell.innerHTML = this.renderMirrorTile(this.cavernMirrors[i]);
+          cell.addEventListener('click', () => {
+            audio.playClick();
+            this.cavernMirrors[i] = (this.cavernMirrors[i] + 1) % 4;
+            cell.innerHTML = this.renderMirrorTile(this.cavernMirrors[i]);
+            this.updateCavernBeams();
+          });
+        }
+        cavernGrid.appendChild(cell);
+      }
+      document.getElementById('cavern-ignite-btn').addEventListener('click', () => {
+        audio.playClick();
+        this.updateCavernBeams();
+        let mirrorIndex = 0;
+        let solved = true;
+        for (let i = 0; i < 25; i++) {
+          if (cavernLayout[i] === 'M') {
+            if (this.cavernMirrors[i] !== cavernSolution[mirrorIndex]) solved = false;
+            mirrorIndex++;
+          }
+        }
+        const receiverLit = this.cavernBeams[24];
+        if (solved && receiverLit) {
+          this.updateStateLocal({ cavernSolved: true });
+          audio.playSuccess();
+          this.showFeedback('The crystal receiver flares bright! A symbol etches itself into the cavern wall.');
+          setTimeout(() => {
+            if (window.gameEngine) window.gameEngine.navigateToNode('crystal_cavern');
+            this.closeActivePuzzle();
+          }, 1500);
+        } else {
+          audio.playBuzzer();
+          this.showFeedback('The light refracts away. Adjust the mirror angles.');
+        }
+      });
+    }
+
+    this.updateCavernBeams();
 
     document.getElementById('fireplace-enter-btn').addEventListener('click', () => {
       audio.playClick();
@@ -511,6 +636,8 @@ export class PuzzleManager {
     updateTask('task-gears', this.state.elevatorPowered);
     updateTask('task-generator', this.state.generatorSolved);
     updateTask('task-piano', this.state.spaceshipSolved);
+    updateTask('task-shrine', this.state.shrineSolved);
+    updateTask('task-cavern', this.state.cavernSolved);
     updateTask('task-fireplace', this.state.mystBookRevealed);
 
     // If final book is revealed, play victory chime once
@@ -533,6 +660,66 @@ export class PuzzleManager {
     // Toggle button visibility
     document.getElementById('prev-page-btn').style.visibility = this.bookPageIndex === 0 ? 'hidden' : 'visible';
     document.getElementById('next-page-btn').style.visibility = this.bookPageIndex === BOOK_PAGES.length - 1 ? 'hidden' : 'visible';
+  }
+
+  // SVG helpers for new puzzles
+  renderPipeTile(rotation) {
+    const pipes = [
+      // 0: vertical
+      '<svg viewBox="0 0 80 80"><path d="M40 0 V80" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/></svg>',
+      // 1: horizontal
+      '<svg viewBox="0 0 80 80"><path d="M0 40 H80" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/></svg>',
+      // 2: L bend (top-left)
+      '<svg viewBox="0 0 80 80"><path d="M40 0 V40 H80" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/></svg>',
+      // 3: T junction
+      '<svg viewBox="0 0 80 80"><path d="M40 0 V80 M0 40 H40" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/></svg>'
+    ];
+    return `<div style="transform: rotate(${rotation * 90}deg); width:100%; height:100%;">${pipes[rotation]}</div>`;
+  }
+
+  renderMirrorTile(rotation) {
+    // slash or backslash mirror line
+    const d = rotation % 2 === 0 ? 'M10 60 L60 10' : 'M10 10 L60 60';
+    return `<svg viewBox="0 0 70 70"><path d="${d}" stroke="#a5b4fc" stroke-width="6" stroke-linecap="round"/><circle cx="35" cy="35" r="4" fill="#a5b4fc"/></svg>`;
+  }
+
+  updateCavernBeams() {
+    const cells = document.querySelectorAll('.light-cell');
+    this.cavernBeams.fill(false);
+    cells.forEach(c => c.classList.remove('beam'));
+
+    // Trace from emitter (index 0) rightward across the grid, bouncing off mirrors.
+    const dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]]; // right, down, left, up
+    const layout = [
+      'E', 0, 0, 0, 0,
+      0, 'M', 0, 'M', 0,
+      0, 0, 'M', 0, 0,
+      0, 'M', 0, 'M', 0,
+      0, 0, 0, 0, 'R'
+    ];
+    let r = 0, c = 0, d = 0;
+    let safety = 0;
+    while (safety++ < 30) {
+      const idx = r * 5 + c;
+      this.cavernBeams[idx] = true;
+      const cell = document.querySelector(`.light-cell[data-idx="${idx}"]`);
+      if (cell && layout[idx] !== 'E' && layout[idx] !== 'R') cell.classList.add('beam');
+      if (layout[idx] === 'R') break;
+      if (layout[idx] === 'M') {
+        const orient = this.cavernMirrors[idx];
+        // mirror orientations: even = /, odd = \
+        if (orient % 2 === 0) {
+          // / mirror: right(0)<->up(3), down(1)<->left(2)
+          d = [3, 2, 1, 0][d];
+        } else {
+          // \ mirror: right(0)<->down(1), up(3)<->left(2)
+          d = [1, 0, 3, 2][d];
+        }
+      }
+      r += dirs[d][1];
+      c += dirs[d][0];
+      if (r < 0 || r >= 5 || c < 0 || c >= 5) break;
+    }
   }
 
   // Updates state locally, evaluates solutions, and pushes to server for persistence/broadcast.

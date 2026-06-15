@@ -1,10 +1,6 @@
 node_modules/
-dist/
-.env
-.DS_Store
-*.local
-.vscode/
-.idea/
 mpyst.db
-mpyst.db-*
-test-socket*.mjs
+server/mpyst.db
+dist/
+.DS_Store
+*.db-shm\n*.db-wal

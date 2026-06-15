@@ -68,7 +68,13 @@ export const NODES = {
     image: '/assets/myst_clock_bridge.png',
     links: [
       { type: 'forward', target: 'clock_tower_interior' },
-      { type: 'back', target: 'docks_path' }
+      { type: 'back', target: 'docks_path' },
+      {
+        type: 'left',
+        target: 'forest_path',
+        condition: (state) => state.generatorSolved,
+        lockedMessage: 'A forest trail is overgrown. The generator pump could clear the path.'
+      }
     ],
     hotspots: [
       {
@@ -76,6 +82,14 @@ export const NODES = {
         action: 'navigate',
         target: 'clock_tower_interior',
         tooltip: 'Enter Clock Tower'
+      },
+      {
+        x: 0, y: 25, w: 22, h: 55, // Forest trail
+        action: 'navigate',
+        target: 'forest_path',
+        condition: (state) => state.generatorSolved,
+        lockedMessage: 'A forest trail is overgrown. The generator pump could clear the path.',
+        tooltip: 'Forest Trail'
       }
     ]
   },
@@ -266,6 +280,90 @@ export const NODES = {
     image: '/assets/myst_spaceship_interior.png',
     links: [
       { type: 'back', target: 'spaceship_exterior' }
+    ]
+  },
+
+  // Forest Shrine zone
+  'forest_path': {
+    id: 'forest_path',
+    title: 'Forest Trail',
+    image: '/assets/myst_forest_path.png',
+    links: [
+      { type: 'back', target: 'clock_tower_exterior' },
+      { type: 'forward', target: 'forest_shrine' }
+    ],
+    hotspots: [
+      {
+        x: 30, y: 5, w: 40, h: 60,
+        action: 'navigate',
+        target: 'forest_shrine',
+        tooltip: 'Approach the Shrine'
+      }
+    ]
+  },
+  'forest_shrine': {
+    id: 'forest_shrine',
+    title: 'Forest Shrine',
+    image: '/assets/myst_forest_shrine.png',
+    links: [
+      { type: 'back', target: 'forest_path' },
+      {
+        type: 'forward',
+        target: 'cavern_path',
+        condition: (state) => state.shrineSolved,
+        lockedMessage: 'A stone door blocks the tunnel. The shrine aqueduct must flow first.'
+      }
+    ],
+    hotspots: [
+      {
+        x: 25, y: 20, w: 50, h: 50,
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-forest-shrine',
+        tooltip: 'Examine the Aqueduct'
+      },
+      {
+        x: 45, y: 60, w: 10, h: 25,
+        action: 'navigate',
+        target: 'cavern_path',
+        condition: (state) => state.shrineSolved,
+        lockedMessage: 'A stone door blocks the tunnel. The shrine aqueduct must flow first.',
+        tooltip: 'Enter the tunnel'
+      }
+    ]
+  },
+
+  // Crystal Cavern zone
+  'cavern_path': {
+    id: 'cavern_path',
+    title: 'Tunnel to the Caverns',
+    image: '/assets/myst_cavern_path.png',
+    links: [
+      { type: 'back', target: 'forest_shrine' },
+      { type: 'forward', target: 'crystal_cavern' }
+    ],
+    hotspots: [
+      {
+        x: 30, y: 5, w: 40, h: 60,
+        action: 'navigate',
+        target: 'crystal_cavern',
+        tooltip: 'Enter the Crystal Cavern'
+      }
+    ]
+  },
+  'crystal_cavern': {
+    id: 'crystal_cavern',
+    title: 'Crystal Cavern',
+    image: '/assets/myst_crystal_cavern.png',
+    links: [
+      { type: 'back', target: 'cavern_path' }
+    ],
+    hotspots: [
+      {
+        x: 15, y: 20, w: 70, h: 55,
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-crystal-cavern',
+        tooltip: 'Align the Crystals'
+      }
     ]
   }
 };
