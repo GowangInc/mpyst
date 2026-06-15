@@ -47,7 +47,7 @@ const BOOK_PAGES = [
   },
   {
     left: "<h3>The Crystal Cavern</h3><p>Through the tunnel behind the shrine lies a cavern of light-bending crystals. An emitter crystal casts a beam that must reach the receiver.</p><p>The mirrors rotate to redirect the beam. Each mirror can face one of four diagonal angles.</p>",
-    right: "<h3>Mirror Angles</h3><p>Number the mirrors from left to right as they appear in the cavern. Set them to these orientations:</p><p><strong>Mirror 1: \</strong> (backslash)<br><strong>Mirror 2: /</strong> (slash)<br><strong>Mirror 3: \</strong> (backslash)<br><strong>Mirror 4: /</strong> (slash)<br><strong>Mirror 5: \</strong> (backslash)</p><p>Then ignite the receiver to reveal the cavern symbol.</p>"
+    right: "<h3>Mirror Angles</h3><p>Three crystals in the cavern redirect the light. Number them in the order the beam reaches them and set each to the backslash angle:</p><p><strong>Mirror 1: \</strong> (backslash)<br><strong>Mirror 2: \</strong> (backslash)<br><strong>Mirror 3: \</strong> (backslash)</p><p>Then ignite the receiver to reveal the cavern symbol.</p>"
   }
 ];
 
@@ -449,11 +449,13 @@ export class PuzzleManager {
         const tile = document.createElement('div');
         tile.className = 'pipe-tile';
         tile.dataset.idx = i;
-        tile.innerHTML = this.renderPipeTile(this.shrinePipes[i]);
+        const isSpring = i === 0;
+        const isWheel = i === 8;
+        tile.innerHTML = this.renderPipeTile(this.shrinePipes[i], isSpring, isWheel);
         tile.addEventListener('click', () => {
           audio.playClick();
           this.shrinePipes[i] = (this.shrinePipes[i] + 1) % 4;
-          tile.innerHTML = this.renderPipeTile(this.shrinePipes[i]);
+          tile.innerHTML = this.renderPipeTile(this.shrinePipes[i], isSpring, isWheel);
         });
         shrineGrid.appendChild(tile);
       }
@@ -487,13 +489,13 @@ export class PuzzleManager {
     const cavernGrid = document.getElementById('cavern-light-grid');
     if (cavernGrid) {
       const cavernLayout = [
-        'E', 0, 0, 0, 0,
-        0, 'M', 0, 'M', 0,
-        0, 0, 'M', 0, 0,
-        0, 'M', 0, 'M', 0,
+        'E', 'M', 0, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 'M', 0, 0, 'M',
+        0, 0, 0, 0, 0,
         0, 0, 0, 0, 'R'
       ];
-      const cavernSolution = [1, 2, 1, 2, 1]; // mirror orientations for the 5 mirrors
+      const cavernSolution = [1, 1, 1]; // all backslash mirrors
       this.cavernMirrors = cavernLayout.map(c => c === 'M' ? 0 : -1);
       cavernGrid.innerHTML = '';
       let mirrorIndex = 0;
@@ -969,7 +971,7 @@ export class PuzzleManager {
   }
 
   // SVG helpers for new puzzles
-  renderPipeTile(type) {
+  renderPipeTile(type, isSpring = false, isWheel = false) {
     // Each value is a fixed pipe shape (no extra rotation).
     // 0 vertical, 1 horizontal, 2 L-bend (top-right), 3 T-junction (top-left-bottom)
     const paths = [
@@ -979,10 +981,22 @@ export class PuzzleManager {
       'M40 0 V80 M0 40 H40'
     ];
     const d = paths[type];
+
+    let markers = '';
+    if (isSpring) {
+      // Blue water drop at top center showing where water enters
+      markers += `<circle cx="40" cy="8" r="7" fill="#4fc3f7" filter="drop-shadow(0 0 5px #4fc3f7)"/><text x="40" y="28" text-anchor="middle" fill="#4fc3f7" font-size="10" font-family="sans-serif" font-weight="bold">IN</text>`;
+    }
+    if (isWheel) {
+      // Water wheel symbol at bottom right showing where water must exit
+      markers += `<circle cx="68" cy="68" r="10" fill="none" stroke="#a8841a" stroke-width="3"/><text x="68" y="64" text-anchor="middle" fill="#a8841a" font-size="8" font-family="sans-serif">OUT</text><path d="M68 58 V78 M58 68 H78" stroke="#a8841a" stroke-width="2"/>`;
+    }
+
     return `<div class="pipe-graphic" style="width:100%; height:100%;">
       <svg viewBox="0 0 80 80">
         <path d="${d}" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/>
         <path class="water-path" d="${d}" stroke="#4fc3f7" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="18 24" stroke-dashoffset="0"/>
+        ${markers}
       </svg>
     </div>`;
   }
@@ -1073,10 +1087,10 @@ export class PuzzleManager {
     // Trace from emitter (index 0) rightward across the grid, bouncing off mirrors.
     const dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]]; // right, down, left, up
     const layout = [
-      'E', 0, 0, 0, 0,
-      0, 'M', 0, 'M', 0,
-      0, 0, 'M', 0, 0,
-      0, 'M', 0, 'M', 0,
+      'E', 'M', 0, 0, 0,
+      0, 0, 0, 0, 0,
+      0, 'M', 0, 0, 'M',
+      0, 0, 0, 0, 0,
       0, 0, 0, 0, 'R'
     ];
     let r = 0, c = 0, d = 0;
@@ -1108,11 +1122,7 @@ export class PuzzleManager {
   updateStateLocal(update) {
     this.state = { ...this.state, ...update };
 
-    // Evaluate any automatic solutions locally (client-side authoritative for puzzle logic).
-    if (this.state.clockHours === 2 && this.state.clockMinutes === 40 && !this.state.bridgeRaised) {
-      this.state.bridgeRaised = true;
-      audio.playSuccess();
-    }
+    // Note: clock bridge solution is only evaluated when the Confirm Time button is pressed.
 
     this.updatePuzzlesUI();
 
