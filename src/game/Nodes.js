@@ -20,7 +20,8 @@ export const NODES = {
         action: 'open_puzzle',
         puzzleId: 'puzzle-marker-switch',
         data: { switchId: 'docks' },
-        tooltip: 'Marker Switch'
+        tooltip: 'Marker Switch',
+        image: '/assets/myst_marker_docks.png'
       },
       {
         x: 35, y: 35, w: 40, h: 45, // Wooden walkway path heading forward
@@ -66,7 +67,8 @@ export const NODES = {
         action: 'open_puzzle',
         puzzleId: 'puzzle-marker-switch',
         data: { switchId: 'docks_path' },
-        tooltip: 'Marker Switch'
+        tooltip: 'Marker Switch',
+        image: '/assets/myst_marker_dockspath.png'
       },
       {
         x: 0, y: 20, w: 20, h: 60, // Left rock pathway
@@ -160,7 +162,8 @@ export const NODES = {
         action: 'open_puzzle',
         puzzleId: 'puzzle-marker-switch',
         data: { switchId: 'library_exterior' },
-        tooltip: 'Marker Switch'
+        tooltip: 'Marker Switch',
+        image: '/assets/myst_marker_library.png'
       },
       {
         x: 30, y: 0, w: 40, h: 20,
@@ -268,7 +271,8 @@ export const NODES = {
         action: 'open_puzzle',
         puzzleId: 'puzzle-marker-switch',
         data: { switchId: 'cabin_path' },
-        tooltip: 'Marker Switch'
+        tooltip: 'Marker Switch',
+        image: '/assets/myst_marker_cabin.png'
       }
     ]
   },
@@ -325,7 +329,8 @@ export const NODES = {
         action: 'open_puzzle',
         puzzleId: 'puzzle-marker-switch',
         data: { switchId: 'spaceship_path' },
-        tooltip: 'Marker Switch'
+        tooltip: 'Marker Switch',
+        image: '/assets/myst_marker_spaceship.png'
       }
     ]
   },

@@ -727,11 +727,11 @@ export class PuzzleManager {
 
   openMarkerSwitch(switchId) {
     if (!switchId) return;
+    audio.playClick();
     if (this.state.markerSwitches[switchId]) {
       this.showFeedback('This marker switch is already raised.');
       return;
     }
-    audio.playClick();
     const next = { ...this.state.markerSwitches, [switchId]: true };
     const allRaised = Object.values(next).every(Boolean);
     this.updateStateLocal({ markerSwitches: next, markerSwitchesRaised: allRaised });

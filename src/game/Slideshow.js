@@ -156,6 +156,11 @@ export class SlideshowManager {
           hsDiv.title = hs.tooltip;
         }
 
+        if (hs.image) {
+          hsDiv.classList.add('has-preview');
+          hsDiv.style.backgroundImage = `url(${hs.image})`;
+        }
+
         hsDiv.addEventListener('click', () => {
           if (hs.action === 'open_puzzle') {
             if (window.gamePuzzles) {

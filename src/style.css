@@ -205,6 +205,18 @@ body, html {
   box-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
 }
 
+/* Some hotspots (like marker switches and puzzles) display a thumbnail preview on hover */
+.action-hotspot.has-preview {
+  background-size: cover;
+  background-position: center;
+  border: 1.5px dashed rgba(212, 175, 55, 0.4);
+}
+
+.action-hotspot.has-preview:hover {
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.35);
+}
+
 /* Nearby players overlay card */
 #node-players-panel {
   position: absolute;
