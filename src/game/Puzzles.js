@@ -43,7 +43,7 @@ const BOOK_PAGES = [
   },
   {
     left: "<h3>The Forest Shrine</h3><p>Beyond the Clock Tower, a hidden trail leads to an ancient shrine where water must be routed to a stone wheel. The aqueduct tiles rotate to direct the flow.</p><p>From the spring in the upper-left, the water must wind down to the wheel in the lower-right.</p>",
-    right: "<h3>Shrine Pipe Code</h3><p>The target tile pattern from left to right, top to bottom is:</p><p><strong>2 1 1 3</strong><br><strong>2 1 1 2</strong><br><strong>2 1 1 3</strong><br><strong>0 0 0 0</strong></p><p>Click each stone tile until it matches this layout, then test the flow.</p>"
+    right: "<h3>Shrine Pipe Code</h3><p>The target tile pattern from left to right, top to bottom is:</p><p><strong>2 1 3</strong><br><strong>0 0 0</strong><br><strong>0 0 0</strong></p><p>Only the top row needs to change. Click each stone tile until it matches this layout, then test the flow.</p>"
   },
   {
     left: "<h3>The Crystal Cavern</h3><p>Through the tunnel behind the shrine lies a cavern of light-bending crystals. An emitter crystal casts a beam that must reach the receiver.</p><p>The mirrors rotate to redirect the beam. Each mirror can face one of four diagonal angles.</p>",
@@ -397,8 +397,8 @@ export class PuzzleManager {
     // Store states of 9 panels locally
     this.fpPanels = Array(9).fill(false);
 
-    // Forest shrine pipe puzzle state (4x4 grid, 0-3 rotations)
-    this.shrinePipes = Array(16).fill(0);
+    // Forest shrine pipe puzzle state (3x3 grid, simple L-shaped aqueduct)
+    this.shrinePipes = Array(9).fill(0);
     // Crystal cavern mirror puzzle state (5x5 grid, -1=empty, 0-3 orientations for mirrors)
     this.cavernMirrors = Array(25).fill(-1);
     this.cavernBeams = Array(25).fill(false);
@@ -419,10 +419,9 @@ export class PuzzleManager {
     const shrineGrid = document.getElementById('shrine-pipe-grid');
     if (shrineGrid) {
       const shrineSolution = [
-        2, 1, 1, 3,
-        2, 1, 1, 2,
-        2, 1, 1, 3,
-        0, 0, 0, 0
+        2, 1, 3,
+        0, 0, 0,
+        0, 0, 0
       ];
       // Connections: bit mask for [top, right, bottom, left]
       const pipeConnections = [
@@ -432,7 +431,7 @@ export class PuzzleManager {
         [1, 0, 1, 1]  // 3 T junction
       ];
       shrineGrid.innerHTML = '';
-      for (let i = 0; i < 16; i++) {
+      for (let i = 0; i < 9; i++) {
         const tile = document.createElement('div');
         tile.className = 'pipe-tile';
         tile.dataset.idx = i;
@@ -448,7 +447,7 @@ export class PuzzleManager {
         audio.playClick();
         const solved = this.shrinePipes.every((v, i) => v === shrineSolution[i]);
         // Compute connected path to animate even on failure
-        const connected = this.tracePipePath(this.shrinePipes, pipeConnections);
+        const connected = this.tracePipePath(this.shrinePipes, pipeConnections, 3, 3);
         document.querySelectorAll('.pipe-tile').forEach(t => t.classList.remove('flowing'));
         connected.forEach(idx => {
           const t = shrineGrid.querySelector(`.pipe-tile[data-idx="${idx}"]`);
@@ -1000,11 +999,10 @@ export class PuzzleManager {
     }
   }
 
-  // Trace connected pipe path from spring (top-left, index 0) to wheel (bottom-right, index 15)
-  tracePipePath(rotations, connections) {
-    const rows = 4, cols = 4;
+  // Trace connected pipe path from spring (top-left) to wheel (bottom-right)
+  tracePipePath(rotations, connections, rows = 4, cols = 4) {
     const start = 0;
-    const target = 15;
+    const target = rows * cols - 1;
     const visited = new Set();
     const path = [];
     const dirs = [[-1,0],[0,1],[1,0],[0,-1]]; // top, right, bottom, left

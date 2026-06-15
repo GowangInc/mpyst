@@ -287,9 +287,13 @@ resetBtn.addEventListener('click', () => {
 const toggleNav = document.getElementById('toggle-nav-indicators');
 const navContainer = document.getElementById('nav-hotspots');
 if (toggleNav && navContainer) {
-  const savedPref = localStorage.getItem('mpyst_show_nav_indicators') === 'true';
-  toggleNav.checked = savedPref;
-  navContainer.classList.toggle('always-visible', savedPref);
+  // Default navigation overlays ON for touch/tablet devices
+  const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  const savedPref = localStorage.getItem('mpyst_show_nav_indicators');
+  const defaultVisible = savedPref !== null ? savedPref === 'true' : isTouchDevice;
+  toggleNav.checked = defaultVisible;
+  navContainer.classList.toggle('always-visible', defaultVisible);
+  document.body.classList.toggle('touch-mode', isTouchDevice);
 
   toggleNav.addEventListener('change', (e) => {
     const isChecked = e.target.checked;
