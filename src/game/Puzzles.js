@@ -40,6 +40,14 @@ const BOOK_PAGES = [
   {
     left: "<h3>The Ship Markers</h3><p>Near the landing pad rests a panel with three rotating marker rings. Sirrus and Achenar used these symbols to seal messages within the Books.</p><p>Look closely at the Red Book and Blue Book podiums — each shows a single dominant symbol.</p>",
     right: "<h3>Marker Alignment</h3><p>Align the three ship markers to match the symbol sequence: <strong>Snake · Flame · Leaf</strong>.</p><p>When the rings lock into place, the panel projects the true pattern of the Library Fireplace grid.</p>"
+  },
+  {
+    left: "<h3>The Forest Shrine</h3><p>Beyond the Clock Tower, a hidden trail leads to an ancient shrine where water must be routed to a stone wheel. The aqueduct tiles rotate to direct the flow.</p><p>From the spring in the upper-left, the water must wind down to the wheel in the lower-right.</p>",
+    right: "<h3>Shrine Pipe Code</h3><p>The target tile pattern from left to right, top to bottom is:</p><p><strong>2 1 1 2</strong><br><strong>0 0 0 0</strong><br><strong>0 0 0 0</strong><br><strong>2 1 1 0</strong></p><p>Click each stone tile until it matches this layout, then test the flow.</p>"
+  },
+  {
+    left: "<h3>The Crystal Cavern</h3><p>Through the tunnel behind the shrine lies a cavern of light-bending crystals. An emitter crystal casts a beam that must reach the receiver.</p><p>The mirrors rotate to redirect the beam. Each mirror can face one of four diagonal angles.</p>",
+    right: "<h3>Mirror Angles</h3><p>Number the mirrors from left to right as they appear in the cavern. Set them to these orientations:</p><p><strong>Mirror 1: \</strong> (backslash)<br><strong>Mirror 2: /</strong> (slash)<br><strong>Mirror 3: \</strong> (backslash)<br><strong>Mirror 4: /</strong> (slash)<br><strong>Mirror 5: \</strong> (backslash)</p><p>Then ignite the receiver to reveal the cavern symbol.</p>"
   }
 ];
 
@@ -388,10 +396,10 @@ export class PuzzleManager {
     const shrineGrid = document.getElementById('shrine-pipe-grid');
     if (shrineGrid) {
       const shrineSolution = [
-        2, 1, 1, 3,
-        2, 3, 2, 1,
-        1, 2, 1, 2,
-        3, 1, 2, 0
+        2, 1, 1, 2,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        2, 1, 1, 0
       ];
       shrineGrid.innerHTML = '';
       for (let i = 0; i < 16; i++) {
