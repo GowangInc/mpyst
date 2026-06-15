@@ -705,6 +705,19 @@ h1, h2, h3, .mystic-title {
   gap: 12px;
   color: var(--text-secondary);
   transition: color 0.3s;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.task-item:hover {
+  color: var(--gold);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.task-item.completed:hover {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
 }
 
 .status-box {

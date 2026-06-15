@@ -116,6 +116,17 @@ socket.on('joined', (data) => {
   window.gameEngine = new SlideshowManager(socket, mode);
   window.gameEngine.renderCurrentNode();
 
+  // Clicking a task in the Island Progress tracker teleports to its location
+  document.querySelectorAll('.task-item[data-nav-target]').forEach((item) => {
+    item.addEventListener('click', () => {
+      if (!window.gameEngine) return;
+      audio.playClick();
+      const target = item.dataset.navTarget;
+      window.gameEngine.navigateToNode(target);
+      window.gamePuzzles?.showFeedback(`Travelled to: ${item.textContent.trim()}`);
+    });
+  });
+
   // Hide login overlay, reveal game screen
   loginOverlay.classList.add('hidden');
   gameHud.classList.remove('hidden');
