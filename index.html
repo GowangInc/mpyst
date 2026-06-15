@@ -344,6 +344,34 @@
     </div>
   </div>
 
+  <!-- Puzzle: Ship Marker Alignment -->
+  <div id="puzzle-ship-markers" class="puzzle-modal hidden">
+    <div class="book-card ship-markers-card">
+      <button class="close-puzzle-btn">&times;</button>
+      <div class="puzzle-title">Ship Marker Alignment</div>
+      <p class="puzzle-instructions">Rotate each marker ring until the symbols match the sequence from the Red and Blue books.</p>
+      <div id="ship-markers-container" class="ship-markers-container">
+        <div class="ship-marker" data-ring="0">
+          <div class="marker-ring"></div>
+          <button class="marker-rotate-btn" data-dir="-1">&#9664;</button>
+          <button class="marker-rotate-btn" data-dir="1">&#9654;</button>
+        </div>
+        <div class="ship-marker" data-ring="1">
+          <div class="marker-ring"></div>
+          <button class="marker-rotate-btn" data-dir="-1">&#9664;</button>
+          <button class="marker-rotate-btn" data-dir="1">&#9654;</button>
+        </div>
+        <div class="ship-marker" data-ring="2">
+          <div class="marker-ring"></div>
+          <button class="marker-rotate-btn" data-dir="-1">&#9664;</button>
+          <button class="marker-rotate-btn" data-dir="1">&#9654;</button>
+        </div>
+      </div>
+      <div id="ship-marker-result" class="ship-marker-result hidden"></div>
+      <button id="ship-marker-submit-btn" class="mystic-btn" style="width:auto; margin-top:12px;">Align Markers</button>
+    </div>
+  </div>
+
   <!-- Main Game HUD (HUD HUD) -->
   <div id="game-hud" class="hidden">
     <!-- Top Bar: Title & Online List -->
@@ -400,6 +428,10 @@
           <li id="task-cabin-safe" class="task-item">
             <span class="status-box"></span>
             Open Cabin Safe
+          </li>
+          <li id="task-ship-markers" class="task-item">
+            <span class="status-box"></span>
+            Align Ship Markers
           </li>
           <li id="task-fireplace" class="task-item">
             <span class="status-box"></span>

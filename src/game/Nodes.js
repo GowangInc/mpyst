@@ -350,6 +350,12 @@ export const NODES = {
         condition: (state) => state.generatorSolved,
         lockedMessage: 'The spaceship door is locked tight. It needs power to activate the controls.',
         tooltip: 'Enter Spaceship'
+      },
+      {
+        x: 15, y: 70, w: 18, h: 18,
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-ship-markers',
+        tooltip: 'Ship Marker Panel'
       }
     ]
   },

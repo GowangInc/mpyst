@@ -36,6 +36,10 @@ const BOOK_PAGES = [
   {
     left: "<h3>The Library Dome</h3><p>Above the Library rests a glass dome that opens to the night sky. Inside is an orrery and star chart left by Atrus.</p><p>Once the elevator is powered, ascend to the dome and trace the constellation of the Serpent across the chart.</p>",
     right: "<h3>The Serpent Constellation</h3><p>The Serpent winds across the sky in seven bright stars. Begin at its head in the upper left and follow its body down, then right, then down again.</p><p>Trace the stars in order to reveal the three-number Cabin Safe code: <strong>4 - 7 - 2</strong>.</p>"
+  },
+  {
+    left: "<h3>The Ship Markers</h3><p>Near the landing pad rests a panel with three rotating marker rings. Sirrus and Achenar used these symbols to seal messages within the Books.</p><p>Look closely at the Red Book and Blue Book podiums — each shows a single dominant symbol.</p>",
+    right: "<h3>Marker Alignment</h3><p>Align the three ship markers to match the symbol sequence: <strong>Snake · Flame · Leaf</strong>.</p><p>When the rings lock into place, the panel projects the true pattern of the Library Fireplace grid.</p>"
   }
 ];
 
@@ -70,6 +74,7 @@ export class PuzzleManager {
 
     this.activePuzzleId = null;
     this.bookPageIndex = 0;
+    this.shipMarkerPositions = [0, 0, 0]; // local rotation states for three rings
 
     this.setupSocketListeners();
     this.setupUIListeners();
@@ -598,6 +603,43 @@ export class PuzzleManager {
       });
     }
 
+    // 5f. SHIP MARKER ALIGNMENT
+    const shipMarkersContainer = document.getElementById('ship-markers-container');
+    if (shipMarkersContainer) {
+      const symbols = ['🐍', '🔥', '🍃', '⚡'];
+      const shipSolution = [0, 1, 2]; // Snake, Flame, Leaf
+      const rings = shipMarkersContainer.querySelectorAll('.ship-marker');
+      rings.forEach((ring, idx) => {
+        const div = ring.querySelector('.marker-ring');
+        div.dataset.symbol = symbols[this.shipMarkerPositions[idx]];
+        div.style.transform = `rotate(${this.shipMarkerPositions[idx] * 90}deg)`;
+        ring.querySelectorAll('.marker-rotate-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (this.state.shipMarkersAligned) return;
+            const dir = parseInt(btn.dataset.dir);
+            this.shipMarkerPositions[idx] = (this.shipMarkerPositions[idx] + dir + 4) % 4;
+            div.dataset.symbol = symbols[this.shipMarkerPositions[idx]];
+            div.style.transform = `rotate(${this.shipMarkerPositions[idx] * 90}deg)`;
+            audio.playClick();
+          });
+        });
+      });
+      document.getElementById('ship-marker-submit-btn').addEventListener('click', () => {
+        audio.playClick();
+        if (this.shipMarkerPositions.every((v, i) => v === shipSolution[i])) {
+          this.updateStateLocal({ shipMarkersAligned: true });
+          audio.playSuccess();
+          const result = document.getElementById('ship-marker-result');
+          result.classList.remove('hidden');
+          result.innerHTML = '<p><strong>Markers aligned.</strong></p><p>The panel projects the Library Fireplace pattern: activate every outer plate, leave the center dark.</p>';
+          this.showFeedback('The ship markers lock into place. A projection shows the fireplace grid pattern.');
+        } else {
+          audio.playBuzzer();
+          this.showFeedback('The markers grind but refuse to lock. The symbols are not in the right order.');
+        }
+      });
+    }
+
     document.getElementById('fireplace-enter-btn').addEventListener('click', () => {
       audio.playClick();
       // Solve check: Hollow square pattern (all active except center index 4)
@@ -676,6 +718,10 @@ export class PuzzleManager {
       this.renderBookPage();
     }
 
+    if (puzzleId === 'puzzle-ship-markers') {
+      this.initShipMarkers();
+    }
+
     this.updatePuzzlesUI();
   }
 
@@ -696,6 +742,18 @@ export class PuzzleManager {
       const raised = Object.values(next).filter(Boolean).length;
       this.showFeedback(`Marker switch raised. ${raised} of 5 are active.`);
     }
+  }
+
+  initShipMarkers() {
+    const container = document.getElementById('ship-markers-container');
+    if (!container) return;
+    const symbols = ['🐍', '🔥', '🍃', '⚡'];
+    const rings = container.querySelectorAll('.ship-marker');
+    rings.forEach((ring, idx) => {
+      const div = ring.querySelector('.marker-ring');
+      div.dataset.symbol = symbols[this.shipMarkerPositions[idx]];
+      div.style.transform = `rotate(${this.shipMarkerPositions[idx] * 90}deg)`;
+    });
   }
 
   closeActivePuzzle() {
@@ -790,7 +848,15 @@ export class PuzzleManager {
     updateTask('task-imager', this.state.imagerSolved);
     updateTask('task-star-chart', this.state.starChartSolved);
     updateTask('task-cabin-safe', this.state.cabinSafeOpened);
+    updateTask('task-ship-markers', this.state.shipMarkersAligned);
     updateTask('task-fireplace', this.state.mystBookRevealed);
+
+    // 10. Ship Marker result
+    const shipMarkerResult = document.getElementById('ship-marker-result');
+    if (shipMarkerResult && this.state.shipMarkersAligned) {
+      shipMarkerResult.classList.remove('hidden');
+      shipMarkerResult.innerHTML = '<p><strong>Markers aligned.</strong></p><p>The panel projects the Library Fireplace pattern: activate every outer plate, leave the center dark.</p>';
+    }
 
     // 8. Star Chart solved UI
     if (this.state.starChartSolved) {
