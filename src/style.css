@@ -2007,6 +2007,22 @@ h1, h2, h3, .mystic-title {
   filter: drop-shadow(0 0 6px #4fc3f7);
 }
 
+.pipe-tile .water-path {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.pipe-tile.flowing .water-path {
+  opacity: 1;
+  animation: waterFlow 0.9s linear infinite;
+}
+
+@keyframes waterFlow {
+  to {
+    stroke-dashoffset: -42;
+  }
+}
+
 .light-grid {
   display: grid;
   grid-template-columns: repeat(5, 70px);

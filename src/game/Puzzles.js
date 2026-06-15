@@ -424,6 +424,13 @@ export class PuzzleManager {
         0, 0, 0, 0,
         2, 1, 1, 0
       ];
+      // Connections: bit mask for [top, right, bottom, left]
+      const pipeConnections = [
+        [1, 0, 1, 0], // 0 vertical
+        [0, 1, 0, 1], // 1 horizontal
+        [1, 1, 0, 0], // 2 L bend (top-left)
+        [1, 0, 1, 1]  // 3 T junction
+      ];
       shrineGrid.innerHTML = '';
       for (let i = 0; i < 16; i++) {
         const tile = document.createElement('div');
@@ -440,6 +447,13 @@ export class PuzzleManager {
       document.getElementById('shrine-flow-btn').addEventListener('click', () => {
         audio.playClick();
         const solved = this.shrinePipes.every((v, i) => v === shrineSolution[i]);
+        // Compute connected path to animate even on failure
+        const connected = this.tracePipePath(this.shrinePipes, pipeConnections);
+        document.querySelectorAll('.pipe-tile').forEach(t => t.classList.remove('flowing'));
+        connected.forEach(idx => {
+          const t = shrineGrid.querySelector(`.pipe-tile[data-idx="${idx}"]`);
+          if (t) t.classList.add('flowing');
+        });
         if (solved) {
           this.updateStateLocal({ shrineSolved: true });
           audio.playSuccess();
@@ -943,17 +957,19 @@ export class PuzzleManager {
 
   // SVG helpers for new puzzles
   renderPipeTile(rotation) {
-    const pipes = [
-      // 0: vertical
-      '<svg viewBox="0 0 80 80"><path d="M40 0 V80" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/></svg>',
-      // 1: horizontal
-      '<svg viewBox="0 0 80 80"><path d="M0 40 H80" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/></svg>',
-      // 2: L bend (top-left)
-      '<svg viewBox="0 0 80 80"><path d="M40 0 V40 H80" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/></svg>',
-      // 3: T junction
-      '<svg viewBox="0 0 80 80"><path d="M40 0 V80 M0 40 H40" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/></svg>'
+    const paths = [
+      'M40 0 V80',               // 0 vertical
+      'M0 40 H80',               // 1 horizontal
+      'M40 0 V40 H80',           // 2 L bend (top-left)
+      'M40 0 V80 M0 40 H40'      // 3 T junction
     ];
-    return `<div style="transform: rotate(${rotation * 90}deg); width:100%; height:100%;">${pipes[rotation]}</div>`;
+    const d = paths[rotation];
+    return `<div class="pipe-graphic" style="transform: rotate(${rotation * 90}deg); width:100%; height:100%;">
+      <svg viewBox="0 0 80 80">
+        <path d="${d}" stroke="#8b7355" stroke-width="14" fill="none" stroke-linecap="round"/>
+        <path class="water-path" d="${d}" stroke="#4fc3f7" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="18 24" stroke-dashoffset="0"/>
+      </svg>
+    </div>`;
   }
 
   renderMirrorTile(rotation) {
@@ -980,6 +996,46 @@ export class PuzzleManager {
       line.setAttribute('y2', y2);
       svg.appendChild(line);
     }
+  }
+
+  // Trace connected pipe path from spring (top-left, index 0) to wheel (bottom-right, index 15)
+  tracePipePath(rotations, connections) {
+    const rows = 4, cols = 4;
+    const start = 0;
+    const target = 15;
+    const visited = new Set();
+    const path = [];
+    const dirs = [[-1,0],[0,1],[1,0],[0,-1]]; // top, right, bottom, left
+
+    const canFlow = (from, to, dir) => {
+      const fromConns = connections[rotations[from]];
+      const toConns = connections[rotations[to]];
+      const opposite = (dir + 2) % 4;
+      return fromConns[dir] && toConns[opposite];
+    };
+
+    const dfs = (idx) => {
+      visited.add(idx);
+      path.push(idx);
+      if (idx === target) return true;
+      const r = Math.floor(idx / cols);
+      const c = idx % cols;
+      for (let d = 0; d < 4; d++) {
+        const nr = r + dirs[d][0];
+        const nc = c + dirs[d][1];
+        if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+        const next = nr * cols + nc;
+        if (visited.has(next)) continue;
+        if (canFlow(idx, next, d)) {
+          if (dfs(next)) return true;
+        }
+      }
+      path.pop();
+      return false;
+    };
+
+    dfs(start);
+    return path;
   }
 
   updateCavernBeams() {
