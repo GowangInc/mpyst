@@ -108,6 +108,20 @@ export class PuzzleManager {
       btn.addEventListener('click', () => this.closeActivePuzzle());
     });
 
+    // Labelled "Close Book" buttons on red/blue book modals
+    document.querySelectorAll('[data-close-book]').forEach(btn => {
+      btn.addEventListener('click', () => this.closeActivePuzzle());
+    });
+
+    // Click outside any puzzle modal to close it (but not on the modal card itself)
+    document.querySelectorAll('.puzzle-modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          this.closeActivePuzzle();
+        }
+      });
+    });
+
     // 1. CLOCK VALVE DIALS
     const hValve = document.getElementById('hours-valve');
     const mValve = document.getElementById('minutes-valve');
