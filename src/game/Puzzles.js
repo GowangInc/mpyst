@@ -368,6 +368,29 @@ export class PuzzleManager {
       });
     });
 
+    // Play the tones currently set on the sliders
+    const playCurrentBtn = document.getElementById('play-current-btn');
+    if (playCurrentBtn) {
+      playCurrentBtn.addEventListener('click', () => {
+        if (!this.state.generatorSolved) {
+          this.showFeedback('The spaceship controls are dark. Power must be routed first.');
+          return;
+        }
+        audio.playClick();
+        const currentNotes = this.state.spaceshipSliders.map(v => SEMITONE_NOTES[v]);
+        currentNotes.forEach((n, idx) => {
+          setTimeout(() => {
+            audio.playNote(NOTE_FREQS[n], 0.6);
+            const key = document.querySelector(`.piano-key[data-note="${n}"]`);
+            if (key) {
+              key.classList.add('active');
+              setTimeout(() => key.classList.remove('active'), 400);
+            }
+          }, idx * 700);
+        });
+      });
+    }
+
     // 5. LIBRARY FIREPLACE GRID (3x3)
     const fpGrid = document.getElementById('fireplace-plate-grid');
     fpGrid.innerHTML = '';
