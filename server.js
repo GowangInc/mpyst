@@ -71,6 +71,15 @@ function createInitialPuzzleState() {
     generatorSolved: false,
     spaceshipSliders: [0, 0, 0, 0, 0],
     spaceshipSolved: false,
+    shrineSolved: false,
+    cavernSolved: false,
+    markerSwitches: { docks: false, docks_path: false, library_exterior: false, cabin_path: false, spaceship_path: false },
+    markerSwitchesRaised: false,
+    imagerInput: '',
+    imagerSolved: false,
+    starChartSolved: false,
+    cabinSafeOpened: false,
+    shipMarkersAligned: false,
     mystBookRevealed: false
   };
 }

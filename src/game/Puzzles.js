@@ -50,6 +50,13 @@ export class PuzzleManager {
       spaceshipSolved: false,
       shrineSolved: false,
       cavernSolved: false,
+      markerSwitches: { docks: false, docks_path: false, library_exterior: false, cabin_path: false, spaceship_path: false },
+      markerSwitchesRaised: false,
+      imagerInput: '',
+      imagerSolved: false,
+      starChartSolved: false,
+      cabinSafeOpened: false,
+      shipMarkersAligned: false,
       mystBookRevealed: false
     };
 
@@ -351,12 +358,6 @@ export class PuzzleManager {
     // Crystal cavern mirror puzzle state (5x5 grid, -1=empty, 0-3 orientations for mirrors)
     this.cavernMirrors = Array(25).fill(-1);
     this.cavernBeams = Array(25).fill(false);
-
-    // Forest shrine pipe puzzle state (4x4 grid, 0-3 rotations)
-    this.shrinePipes = Array(16).fill(0);
-    // Crystal cavern mirror puzzle state (5x5 grid, -1=empty, 0-3 orientations for mirrors)
-    this.cavernMirrors = Array(25).fill(-1);
-    this.cavernBeams = Array(25).fill(false);
     for (let i = 0; i < 9; i++) {
       const plate = document.createElement('div');
       plate.className = 'fire-plate';
@@ -523,7 +524,7 @@ export class PuzzleManager {
   }
 
   // Opens a specific puzzle overlay modal
-  openPuzzle(puzzleId) {
+  openPuzzle(puzzleId, data = {}) {
     if (this.activePuzzleId) return;
 
     // Check if powered for spaceship
@@ -532,9 +533,15 @@ export class PuzzleManager {
       return;
     }
 
+    // Marker switch modal uses the same modal with dynamic ID
+    if (puzzleId === 'puzzle-marker-switch') {
+      this.openMarkerSwitch(data.switchId);
+      return;
+    }
+
     audio.playClick();
     this.activePuzzleId = puzzleId;
-    
+
     const modal = document.getElementById(puzzleId);
     if (modal) {
       modal.classList.remove('hidden');
@@ -547,6 +554,25 @@ export class PuzzleManager {
     }
 
     this.updatePuzzlesUI();
+  }
+
+  openMarkerSwitch(switchId) {
+    if (!switchId) return;
+    if (this.state.markerSwitches[switchId]) {
+      this.showFeedback('This marker switch is already raised.');
+      return;
+    }
+    audio.playClick();
+    const next = { ...this.state.markerSwitches, [switchId]: true };
+    const allRaised = Object.values(next).every(Boolean);
+    this.updateStateLocal({ markerSwitches: next, markerSwitchesRaised: allRaised });
+    if (allRaised) {
+      audio.playSuccess();
+      this.showFeedback('All five marker switches are raised. The Library Imager hums to life!');
+    } else {
+      const raised = Object.values(next).filter(Boolean).length;
+      this.showFeedback(`Marker switch raised. ${raised} of 5 are active.`);
+    }
   }
 
   closeActivePuzzle() {

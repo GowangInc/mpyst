@@ -159,7 +159,7 @@ export class SlideshowManager {
         hsDiv.addEventListener('click', () => {
           if (hs.action === 'open_puzzle') {
             if (window.gamePuzzles) {
-              window.gamePuzzles.openPuzzle(hs.puzzleId);
+              window.gamePuzzles.openPuzzle(hs.puzzleId, hs.data);
             }
           } else if (hs.action === 'navigate') {
             audio.playClick();

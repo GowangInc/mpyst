@@ -16,6 +16,13 @@ export const NODES = {
         tooltip: 'Examine Clock Valve Pillar'
       },
       {
+        x: 80, y: 55, w: 18, h: 22,
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-marker-switch',
+        data: { switchId: 'docks' },
+        tooltip: 'Marker Switch'
+      },
+      {
         x: 35, y: 35, w: 40, h: 45, // Wooden walkway path heading forward
         action: 'navigate',
         target: 'docks_path',
@@ -53,6 +60,13 @@ export const NODES = {
         condition: (state) => state.bridgeRaised,
         lockedMessage: 'The clock tower lies across deep water. The bridge must be raised.',
         tooltip: 'Cross Bridge to Clock Tower'
+      },
+      {
+        x: 4, y: 82, w: 12, h: 12,
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-marker-switch',
+        data: { switchId: 'docks_path' },
+        tooltip: 'Marker Switch'
       },
       {
         x: 0, y: 20, w: 20, h: 60, // Left rock pathway
@@ -136,6 +150,13 @@ export const NODES = {
         tooltip: 'Enter Library'
       },
       {
+        x: 42, y: 88, w: 14, h: 8,
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-marker-switch',
+        data: { switchId: 'library_exterior' },
+        tooltip: 'Marker Switch'
+      },
+      {
         x: 0, y: 35, w: 30, h: 55, // Left path to generator cabin
         action: 'navigate',
         target: 'cabin_path',
@@ -205,6 +226,13 @@ export const NODES = {
         action: 'navigate',
         target: 'cabin_exterior',
         tooltip: 'Walk to Cabin'
+      },
+      {
+        x: 86, y: 75, w: 12, h: 18,
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-marker-switch',
+        data: { switchId: 'cabin_path' },
+        tooltip: 'Marker Switch'
       }
     ]
   },
@@ -247,6 +275,13 @@ export const NODES = {
         action: 'navigate',
         target: 'spaceship_exterior',
         tooltip: 'Walk to Spaceship'
+      },
+      {
+        x: 2, y: 55, w: 12, h: 20,
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-marker-switch',
+        data: { switchId: 'spaceship_path' },
+        tooltip: 'Marker Switch'
       }
     ]
   },

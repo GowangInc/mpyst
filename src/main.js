@@ -235,6 +235,13 @@ function calculateProgress(progress) {
     progress.elevatorPowered,
     progress.generatorSolved,
     progress.spaceshipSolved,
+    progress.shrineSolved,
+    progress.cavernSolved,
+    progress.markerSwitchesRaised,
+    progress.imagerSolved,
+    progress.starChartSolved,
+    progress.cabinSafeOpened,
+    progress.shipMarkersAligned,
     progress.mystBookRevealed
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
