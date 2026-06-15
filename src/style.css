@@ -507,6 +507,80 @@ h1, h2, h3, .mystic-title {
   gap: 16px;
 }
 
+/* On narrow / tablet screens, collapse HUD sides so the viewport stays visible */
+@media (max-width: 900px) {
+  #game-hud {
+    grid-template-columns: 220px 1fr 220px;
+    padding: 10px;
+    gap: 10px;
+  }
+  .panel-tasks {
+    padding: 12px !important;
+  }
+  .panel-tasks .task-list {
+    gap: 8px;
+  }
+  .panel-tasks .task-item {
+    font-size: 0.75rem;
+  }
+  .panel-chat {
+    padding: 12px !important;
+  }
+  .panel-players {
+    padding: 8px 12px !important;
+    max-width: 55%;
+  }
+  .panel-players h3 {
+    font-size: 0.8rem;
+  }
+  .player-chip {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+  }
+  .hud-tip {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+}
+
+@media (max-width: 700px) {
+  #game-hud {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    padding: 8px;
+    gap: 8px;
+    pointer-events: none;
+  }
+  #game-hud > * {
+    pointer-events: none;
+  }
+  #game-hud .hud-top,
+  #game-hud .hud-left,
+  #game-hud .hud-right,
+  #game-hud .hud-bottom {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .hud-left,
+  .hud-right,
+  .hud-bottom {
+    display: none;
+  }
+  .hud-top {
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .panel-players {
+    max-width: none;
+    flex: 1;
+  }
+  .panel-tasks,
+  .panel-chat,
+  .panel-leaderboard {
+    display: none;
+  }
+}
+
 #game-hud.hidden {
   display: none !important;
 }
@@ -607,6 +681,7 @@ h1, h2, h3, .mystic-title {
 
 .panel-tasks {
   flex: 1;
+  pointer-events: auto;
 }
 
 .panel-tasks h3 {
