@@ -564,6 +564,40 @@ export class PuzzleManager {
       });
     }
 
+    // 5e. CABIN SAFE
+    const safeDisplay = document.getElementById('safe-display');
+    const safeContents = document.getElementById('safe-contents');
+    if (safeDisplay) {
+      this.safeCode = '';
+      document.querySelectorAll('.safe-keypad button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.key;
+          if (key === 'C') {
+            audio.playClick();
+            this.safeCode = '';
+            safeDisplay.textContent = '000';
+          } else if (key === 'E') {
+            audio.playClick();
+            if (this.safeCode === '472') {
+              this.updateStateLocal({ cabinSafeOpened: true });
+              audio.playSuccess();
+              safeContents.classList.remove('hidden');
+              this.showFeedback('The safe clicks open! Inside is a note with a secret gear code.');
+            } else {
+              audio.playBuzzer();
+              this.showFeedback('The safe beeps angrily. Wrong code.');
+              this.safeCode = '';
+              safeDisplay.textContent = '000';
+            }
+          } else if (this.safeCode.length < 3) {
+            audio.playClick();
+            this.safeCode += key;
+            safeDisplay.textContent = this.safeCode.padStart(3, '0');
+          }
+        });
+      });
+    }
+
     document.getElementById('fireplace-enter-btn').addEventListener('click', () => {
       audio.playClick();
       // Solve check: Hollow square pattern (all active except center index 4)
@@ -755,11 +789,18 @@ export class PuzzleManager {
     updateTask('task-cavern', this.state.cavernSolved);
     updateTask('task-imager', this.state.imagerSolved);
     updateTask('task-star-chart', this.state.starChartSolved);
+    updateTask('task-cabin-safe', this.state.cabinSafeOpened);
     updateTask('task-fireplace', this.state.mystBookRevealed);
 
     // 8. Star Chart solved UI
     if (this.state.starChartSolved) {
       document.querySelectorAll('.star-cell').forEach(c => c.classList.add('active'));
+    }
+
+    // 9. Cabin Safe contents
+    const safeContents = document.getElementById('safe-contents');
+    if (safeContents && this.state.cabinSafeOpened) {
+      safeContents.classList.remove('hidden');
     }
 
     // 7. Library Imager UI

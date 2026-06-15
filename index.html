@@ -317,6 +317,33 @@
     </div>
   </div>
 
+  <!-- Puzzle: Cabin Safe -->
+  <div id="puzzle-cabin-safe" class="puzzle-modal hidden">
+    <div class="book-card cabin-safe-card">
+      <button class="close-puzzle-btn">&times;</button>
+      <div class="puzzle-title">Cabin Safe</div>
+      <div class="safe-display" id="safe-display">000</div>
+      <div class="safe-keypad">
+        <button data-key="1">1</button>
+        <button data-key="2">2</button>
+        <button data-key="3">3</button>
+        <button data-key="4">4</button>
+        <button data-key="5">5</button>
+        <button data-key="6">6</button>
+        <button data-key="7">7</button>
+        <button data-key="8">8</button>
+        <button data-key="9">9</button>
+        <button data-key="C">C</button>
+        <button data-key="0">0</button>
+        <button data-key="E">E</button>
+      </div>
+      <div id="safe-contents" class="safe-contents hidden">
+        <p><strong>Inside the safe you find a tattered note:</strong></p>
+        <p>"The Clock Tower gear lock can be bypassed in an emergency. The true combination is <strong>3 - 1 - 4</strong>."</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Main Game HUD (HUD HUD) -->
   <div id="game-hud" class="hidden">
     <!-- Top Bar: Title & Online List -->
@@ -369,6 +396,10 @@
           <li id="task-star-chart" class="task-item">
             <span class="status-box"></span>
             Trace Serpent Constellation
+          </li>
+          <li id="task-cabin-safe" class="task-item">
+            <span class="status-box"></span>
+            Open Cabin Safe
           </li>
           <li id="task-fireplace" class="task-item">
             <span class="status-box"></span>

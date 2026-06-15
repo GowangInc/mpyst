@@ -295,6 +295,14 @@ export const NODES = {
     image: '/assets/myst_cabin_interior.png',
     links: [
       { type: 'back', target: 'cabin_exterior' }
+    ],
+    hotspots: [
+      {
+        x: 82, y: 55, w: 14, h: 24,
+        action: 'open_puzzle',
+        puzzleId: 'puzzle-cabin-safe',
+        tooltip: 'Open Wall Safe'
+      }
     ]
   },
   'spaceship_path': {

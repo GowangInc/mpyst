@@ -1796,6 +1796,73 @@ h1, h2, h3, .mystic-title {
   filter: drop-shadow(0 0 4px #ffe066);
 }
 
+.cabin-safe-card {
+  background: #2a2520 !important;
+  border-color: #6b5c4b !important;
+  width: 340px;
+  height: auto;
+  display: block;
+  padding: 24px;
+}
+
+.safe-display {
+  background: #0d131f;
+  border: 2px solid #5a4b37;
+  border-radius: 8px;
+  padding: 16px;
+  font-family: monospace;
+  font-size: 2.2rem;
+  text-align: center;
+  color: var(--gold);
+  letter-spacing: 12px;
+  margin: 16px 0;
+}
+
+.safe-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.safe-keypad button {
+  padding: 14px;
+  font-size: 1.1rem;
+  background: #3a3229;
+  border: 1px solid #5a4b37;
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.safe-keypad button:hover {
+  background: #4a4136;
+  border-color: var(--gold);
+}
+
+.safe-keypad button:active {
+  transform: scale(0.96);
+}
+
+.safe-contents {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.safe-contents.hidden {
+  display: none !important;
+}
+
+.safe-contents strong {
+  color: var(--gold);
+}
+
 .pipe-grid {
   display: grid;
   grid-template-columns: repeat(4, 80px);
