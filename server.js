@@ -84,6 +84,15 @@ function createInitialPuzzleState() {
   };
 }
 
+function normalizePuzzleState(state) {
+  const safeState = state && typeof state === 'object' ? state : {};
+  return { ...createInitialPuzzleState(), ...safeState };
+}
+
+function isInitialPuzzleState(state) {
+  return JSON.stringify(normalizePuzzleState(state)) === JSON.stringify(createInitialPuzzleState());
+}
+
 function requireAdmin(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '') || req.body?.adminToken || req.query?.adminToken;
   if (token !== ADMIN_TOKEN) {
@@ -184,9 +193,10 @@ async function startServer() {
   app.post('/api/admin/competitions/:code/reset', requireAdmin, (req, res) => {
     const competition = getCompetitionByCode(req.params.code);
     if (!competition) return res.status(404).json({ error: 'Competition not found' });
-    resetCompetition(competition.id);
+    const initialState = createInitialPuzzleState();
+    resetCompetition(competition.id, initialState);
     const active = getOrCreateActiveCompetition(competition.id);
-    active.coopState = createInitialPuzzleState();
+    active.coopState = initialState;
     broadcastLeaderboard(competition.id);
     res.json({ success: true });
   });
@@ -301,14 +311,15 @@ async function startServer() {
       });
 
       // Send current puzzle state
+      const playerProgress = normalizePuzzleState(player.progress);
       if (effectiveMode === 'coop') {
-        // Merge player's saved progress into the in-memory coop state if coop state is fresh
-        if (Object.keys(active.coopState).every(k => !active.coopState[k] || active.coopState[k] === createInitialPuzzleState()[k])) {
-          active.coopState = { ...createInitialPuzzleState(), ...player.progress, ...active.coopState };
+        // Restore saved cooperative progress after a server restart, but do not overwrite live room state.
+        if (isInitialPuzzleState(active.coopState) && !isInitialPuzzleState(playerProgress)) {
+          active.coopState = normalizePuzzleState({ ...active.coopState, ...playerProgress });
         }
-        socket.emit('puzzle_state', active.coopState);
+        socket.emit('puzzle_state', normalizePuzzleState(active.coopState));
       } else {
-        socket.emit('puzzle_state', player.progress);
+        socket.emit('puzzle_state', playerProgress);
       }
 
       broadcastPlayers(competition.id);
@@ -348,16 +359,20 @@ async function startServer() {
     socket.on('chat_message', (msg) => {
       const op = onlinePlayers.get(socket.id);
       if (!op) return;
+      if (typeof msg !== 'string') return;
+      const text = msg.trim().slice(0, 500);
+      if (!text) return;
       io.to(`competition:${op.competitionId}`).emit('chat_received', {
         sender: op.player.name,
         color: op.player.color,
-        text: msg
+        text
       });
     });
 
     socket.on('puzzle_interaction', (update) => {
       const op = onlinePlayers.get(socket.id);
       if (!op) return;
+      if (!update || typeof update !== 'object' || Array.isArray(update)) return;
 
       const competition = getCompetitionById(op.competitionId);
       const active = getOrCreateActiveCompetition(op.competitionId);
@@ -365,11 +380,13 @@ async function startServer() {
       op.mode = effectiveMode;
 
       if (effectiveMode === 'coop') {
-        active.coopState = { ...active.coopState, ...update };
+        active.coopState = normalizePuzzleState({ ...active.coopState, ...update });
+        savePlayerProgress(op.player.token, active.coopState);
+        op.player = getPlayerByToken(op.player.token);
         io.to(`competition:${op.competitionId}`).emit('puzzle_update', active.coopState);
       } else {
         const player = getPlayerByToken(op.player.token);
-        const newProgress = { ...player.progress, ...update };
+        const newProgress = normalizePuzzleState({ ...player.progress, ...update });
         savePlayerProgress(op.player.token, newProgress);
         op.player = getPlayerByToken(op.player.token); // refresh local ref
         socket.emit('puzzle_update', newProgress);

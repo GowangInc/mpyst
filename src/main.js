@@ -229,14 +229,30 @@ function renderLeaderboard(players) {
     const progress = calculateProgress(p.progress);
     const row = document.createElement('div');
     row.className = 'leaderboard-row';
-    row.innerHTML = `
-      <span class="leaderboard-rank">#${idx + 1}</span>
-      <span class="leaderboard-dot" style="background:${p.color || '#ffd700'}"></span>
-      <span class="leaderboard-name">${p.name}</span>
-      <span class="leaderboard-progress">${progress}%</span>
-    `;
+
+    const rank = document.createElement('span');
+    rank.className = 'leaderboard-rank';
+    rank.textContent = `#${idx + 1}`;
+
+    const dot = document.createElement('span');
+    dot.className = 'leaderboard-dot';
+    dot.style.background = isValidCssColor(p.color) ? p.color : '#ffd700';
+
+    const name = document.createElement('span');
+    name.className = 'leaderboard-name';
+    name.textContent = p.name || 'Explorer';
+
+    const progressEl = document.createElement('span');
+    progressEl.className = 'leaderboard-progress';
+    progressEl.textContent = `${progress}%`;
+
+    row.append(rank, dot, name, progressEl);
     leaderboardList.appendChild(row);
   });
+}
+
+function isValidCssColor(color) {
+  return typeof color === 'string' && window.CSS?.supports?.('color', color);
 }
 
 function calculateProgress(progress) {

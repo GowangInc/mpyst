@@ -13,7 +13,7 @@ db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
 export function hashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  return crypto.createHash('sha256').update(String(password ?? '')).digest('hex');
 }
 
 export function initDatabase() {
@@ -96,8 +96,9 @@ export function deleteCompetition(id) {
   db.prepare('DELETE FROM competitions WHERE id = ?').run(id);
 }
 
-export function resetCompetition(id) {
-  db.prepare('UPDATE players SET progress_json = ?, completed_at = NULL WHERE competition_id = ?').run('{}', id);
+export function resetCompetition(id, progress = {}) {
+  db.prepare('UPDATE players SET progress_json = ?, completed_at = NULL WHERE competition_id = ?')
+    .run(JSON.stringify(progress), id);
   db.prepare('DELETE FROM events WHERE competition_id = ?').run(id);
   return getCompetitionById(id);
 }
